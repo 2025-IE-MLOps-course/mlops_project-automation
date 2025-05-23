@@ -150,3 +150,11 @@ def main() -> None:
 # CLI wrapper
 if __name__ == "__main__":
     main()
+
+'''
+python -m src.main `
+    --stage infer `
+    --config config.yaml `
+    --input_csv data/inference/new_data.csv `
+    --output_csv data/inference/output_predictions.csv
+'''
