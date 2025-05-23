@@ -45,7 +45,7 @@ model:
       random_state: 42
 
 raw_features:  
-  - rx_ds
+  - "rx ds"
   - A
   - B
   - C
