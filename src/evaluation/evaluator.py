@@ -56,7 +56,8 @@ def evaluate_classification(
         y_prob = None
 
     # Calculate confusion matrix for specificity/NPV
-    tn, fp, fn, tp = confusion_matrix(y, y_pred).ravel()
+    cm = confusion_matrix(y, y_pred, labels=[0, 1])
+    tn, fp, fn, tp = cm.ravel()
 
     results = {}
     for metric in config.get("metrics", []):
