@@ -20,8 +20,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 )
-from src.preprocess.preprocessing import build_preprocessing_pipeline, get_output_feature_names
-from src.evaluation.evaluator import evaluate_classification
+from preprocess.preprocessing import build_preprocessing_pipeline, get_output_feature_names
+from evaluation.evaluator import evaluate_classification
 
 
 logger = logging.getLogger(__name__)

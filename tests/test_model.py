@@ -37,7 +37,7 @@ def toy_df():
 def minimal_config(tmp_path):
     """Minimal config dictionary for a full pipeline run, with tmp_path output."""
     return {
-        "raw_features": ["f1", "f2", "target"],
+        "raw_features": ["f1", "f2"],
         "target": "target",
         "data_split": {
             "test_size": 0.33,
@@ -113,16 +113,17 @@ def test_evaluate_model_basic_metrics(Xy):
 
 
 def test_evaluate_model_handles_no_predict_proba(Xy):
-    """evaluate_model works even if model lacks predict_proba (force LogisticRegression with no probability)."""
-    from sklearn.linear_model import LogisticRegression
+    """evaluate_model works for classifier lacking predict_proba (should not error, ROC AUC becomes nan)."""
+    from sklearn.svm import LinearSVC
     X, y = Xy
-    model = LogisticRegression()
+    model = LinearSVC()
     model.fit(X, y)
-    # Remove predict_proba artificially
-    delattr(model, "predict_proba")
     metrics = ["roc auc"]
     out = evaluate_model(model, X, y, metrics)
     assert "ROC AUC" in out
+    # Since no predict_proba, value should be nan
+    assert np.isnan(out["ROC AUC"])
+
 
 # --- Tests for artifact saving/loading ---
 
@@ -183,13 +184,19 @@ def test_run_model_pipeline_unsupported_model(toy_df, minimal_config):
         run_model_pipeline(toy_df, cfg)
 
 
-def test_train_model_with_missing_data():
-    """train_model with missing values in X raises/sklearn error."""
+def test_train_model_allows_missing_data_decision_tree():
+    """train_model with missing values in X works for DecisionTreeClassifier."""
     X = np.array([[0, np.nan], [1, 3], [0, 1]])
     y = np.array([0, 1, 0])
-    # Most sklearn models will error on NaN (unless you impute)
-    with pytest.raises(ValueError):
-        train_model(X, y, "decision_tree", {})
+    try:
+        model = train_model(X, y, "decision_tree", {})
+        # Optionally: Check that model can predict (may propagate NaNs)
+        preds = model.predict(X)
+        assert len(preds) == len(y)
+    except Exception as e:
+        pytest.fail(
+            f"DecisionTreeClassifier should support NaNs, but got: {e}")
+
 
 # --- Serialization/Deserialization integration test ---
 
