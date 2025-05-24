@@ -6,8 +6,6 @@ Binary classification evaluation utilities for MLOps pipelines.
 - Designed for modular use in model.py or as standalone analysis
 - All metrics, output paths, and options are config-driven for reproducibility
 - Returns results as dict and optionally saves artifact (JSON)
-
-Teaching note: Separate evaluation logic from training for clarity, reuse, and traceability.
 """
 
 import logging

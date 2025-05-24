@@ -1,12 +1,9 @@
-# src/data_validation/data_validator.py
-
 """
 Reusable, config-driven, production-quality data validation module for MLOps pipelines.
 
 - Validates data against a schema defined in the config.yaml file
 - Checks column presence, type, missing values, value ranges, and allowed sets
 - Behavior (raise or warn) is configurable; results are logged and written as JSON
-- This code is fully documented for educational purposes
 """
 
 import logging

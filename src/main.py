@@ -29,11 +29,12 @@ Only data validation:
 
     python -m src.main --stage data
 
-Batch inference:
-
-    python -m src.main --stage infer \
-        --input_csv data/inference/new_data.csv \
-        --output_csv data/inference/predictions.csv
+PowerShell inference:
+python -m src.main `
+    --stage infer `
+    --config config.yaml `
+    --input_csv data/inference/new_data.csv `
+    --output_csv data/inference/output_predictions.csv
 """
 
 from __future__ import annotations
@@ -59,7 +60,8 @@ def _setup_logging(cfg: Dict) -> None:
     """Configure root logger from config.yaml → logging section."""
     log_level = cfg.get("level", "INFO").upper()
     log_file = cfg.get("log_file", "logs/main.log")
-    fmt = cfg.get("format", "%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    fmt = cfg.get(
+        "format", "%(asctime)s - %(levelname)s - %(name)s - %(message)s")
     datefmt = cfg.get("datefmt", "%Y-%m-%d %H:%M:%S")
 
     os.makedirs(os.path.dirname(log_file) or ".", exist_ok=True)
@@ -121,7 +123,8 @@ def main() -> None:
     try:
         # 2 – data loading + validation -----------------------------------
         if args.stage in ("all", "data"):
-            df_raw = get_data(config_path=args.config, env_path=args.env, data_stage="raw")
+            df_raw = get_data(config_path=args.config,
+                              env_path=args.env, data_stage="raw")
             logger.info("Raw data loaded | shape=%s", df_raw.shape)
             validate_data(df_raw, cfg)
 
@@ -129,14 +132,16 @@ def main() -> None:
         if args.stage in ("all", "train"):
             # reuse dataframe if already loaded in "all"
             if args.stage == "train":
-                df_raw = get_data(config_path=args.config, env_path=args.env, data_stage="raw")
+                df_raw = get_data(config_path=args.config,
+                                  env_path=args.env, data_stage="raw")
                 validate_data(df_raw, cfg)
             run_model_pipeline(df_raw, cfg)
 
         # 4 – batch inference --------------------------------------------
         if args.stage == "infer":
             if not args.input_csv or not args.output_csv:
-                logger.error("Inference stage requires --input_csv and --output_csv")
+                logger.error(
+                    "Inference stage requires --input_csv and --output_csv")
                 sys.exit(1)
             run_inference(args.input_csv, args.config, args.output_csv)
 
@@ -150,11 +155,3 @@ def main() -> None:
 # CLI wrapper
 if __name__ == "__main__":
     main()
-
-'''
-python -m src.main `
-    --stage infer `
-    --config config.yaml `
-    --input_csv data/inference/new_data.csv `
-    --output_csv data/inference/output_predictions.csv
-'''
