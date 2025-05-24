@@ -47,10 +47,10 @@ from typing import Dict
 
 import yaml
 
-from src.data_load.data_loader import get_data
-from src.data_validation.data_validator import validate_data
-from src.model.model import run_model_pipeline
-from src.inference.inferencer import run_inference
+from data_load.data_loader import get_data
+from data_validation.data_validator import validate_data
+from model.model import run_model_pipeline
+from inference.inferencer import run_inference
 
 logger = logging.getLogger(__name__)
 
