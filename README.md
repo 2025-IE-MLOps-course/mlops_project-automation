@@ -154,8 +154,8 @@ pytest
 
 ## 👩‍💻 Authors and Acknowledgments
 
-- Project led by [Your Name/Team]
-- Part of [Course Name, Institution]
+- Project led by Prof. Ivan Diaz
+- Part of MLOps (IE University)
 - Inspired by open-source MLOps community and real-world healthcare analytics use cases
 
 ---
