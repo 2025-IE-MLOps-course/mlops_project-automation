@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import logging
 from typing import Dict, List
-
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
@@ -50,7 +49,10 @@ from sklearn.preprocessing import (
     OrdinalEncoder,
 )
 
+from features.feature_eng import RiskScore
+
 logger = logging.getLogger(__name__)
+
 
 class ColumnRenamer(BaseEstimator, TransformerMixin):
     """
@@ -189,6 +191,7 @@ def build_preprocessing_pipeline(config: Dict) -> Pipeline:
 
     pipeline = Pipeline(
         steps=[
+            ("risk_score", RiskScore()),  # Add risk score feature
             ("rename", ColumnRenamer(rename_map)),  # Must run first
             ("col_transform", col_transformer),
         ]
@@ -228,12 +231,17 @@ def get_output_feature_names(
     col_transform = preprocessor.named_steps["col_transform"]
 
     for _, transformer, cols in col_transform.transformers_:
+
+        # skip columns that were explicitly dropped
+        if transformer == "drop":
+            continue
+
         # Case 1 – transformer exposes its own get_feature_names_out
         if hasattr(transformer, "get_feature_names_out"):
             try:
                 feature_names.extend(transformer.get_feature_names_out(cols))
                 continue
-            except Exception:  # noqa: BLE001  acceptable fallback
+            except Exception:  # acceptable fallback
                 pass
 
         # Case 2 – transformer is a pipeline; inspect its last step
@@ -243,7 +251,7 @@ def get_output_feature_names(
                 try:
                     feature_names.extend(last_step.get_feature_names_out(cols))
                     continue
-                except Exception:  # noqa: BLE001
+                except Exception:
                     pass
 
         # Case 3 – passthrough branch or unknown transformer

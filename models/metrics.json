@@ -1,30 +1,30 @@
 {
   "validation": {
-    "Accuracy": 0.86,
-    "Precision (PPV)": 0.83,
+    "Accuracy": 0.88,
+    "Precision (PPV)": 0.88,
     "Specificity": 0.99,
-    "F1 Score": 0.42,
-    "Negative Predictive Value (NPV)": 0.86,
-    "ROC AUC": 0.83,
+    "F1 Score": 0.54,
+    "Negative Predictive Value (NPV)": 0.88,
+    "ROC AUC": 0.87,
     "Confusion Matrix": {
       "tn": 162,
       "fp": 2,
-      "fn": 26,
-      "tp": 10
+      "fn": 22,
+      "tp": 14
     }
   },
   "test": {
     "Accuracy": 0.86,
-    "Precision (PPV)": 0.85,
+    "Precision (PPV)": 0.91,
     "Specificity": 0.99,
-    "F1 Score": 0.45,
-    "Negative Predictive Value (NPV)": 0.87,
-    "ROC AUC": 0.86,
+    "F1 Score": 0.43,
+    "Negative Predictive Value (NPV)": 0.86,
+    "ROC AUC": 0.85,
     "Confusion Matrix": {
-      "tn": 162,
-      "fp": 2,
-      "fn": 25,
-      "tp": 11
+      "tn": 163,
+      "fp": 1,
+      "fn": 26,
+      "tp": 10
     }
   }
 }

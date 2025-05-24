@@ -68,8 +68,10 @@ raw_features:
 features:
   continuous:
     - rx_ds
+    - risk_score
   categorical: []
   engineered:
+    - risk_score
     - rx_ds_norm
     - rx_ds_bucket_Q1
     - rx_ds_bucket_Q2

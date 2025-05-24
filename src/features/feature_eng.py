@@ -1,5 +1,5 @@
 """
-features.py
+feature_eng.py
 
 Feature engineering transformers for MLOps pipelines.
 - All new features should be implemented as scikit-learn compatible transformers
@@ -38,7 +38,20 @@ class RiskScore(BaseEstimator, TransformerMixin):
 
     def transform(self, X: pd.DataFrame):
         X = X.copy()
-        X["risk_score"] = X[ICD10_CHAPTER_FLAGS].sum(axis=1)
+
+        # Ensure every ICD-10 flag column exists
+        for col in ICD10_CHAPTER_FLAGS:
+            if col not in X.columns:
+                X[col] = 0
+
+        # Coerce to numeric; strings become NaN → fill with 0
+        icd_numeric = (
+            X[ICD10_CHAPTER_FLAGS]
+            .apply(pd.to_numeric, errors="coerce")
+            .fillna(0)
+        )
+
+        X["risk_score"] = icd_numeric.sum(axis=1)
         return X
 
 # Template for future engineered features:
@@ -58,4 +71,3 @@ class RiskScore(BaseEstimator, TransformerMixin):
 FEATURE_TRANSFORMERS = {
     "risk_score": RiskScore
 }
-
