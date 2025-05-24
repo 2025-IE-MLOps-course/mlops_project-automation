@@ -20,7 +20,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from src.preprocess.preprocessing import get_output_feature_names
+from preprocess.preprocessing import get_output_feature_names
 
 
 logger = logging.getLogger(__name__)
