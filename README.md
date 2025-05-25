@@ -68,6 +68,12 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 
 ## 🛠️ Pipeline Modules
 
+### 0. Pipeline Orchestration (`src/main.py`)
+- Single entry point that orchestrates the entire MLOps workflow
+- Supports configurable pipeline stages: data validation, model training, batch inference
+- Integrates all modular components with robust logging and error handling
+- Enables reproducible, scriptable runs for both research and production
+
 ### 1. Data Loading (`src/data_load/data_loader.py`)
 - Loads data from CSV/Excel as specified in `config.yaml`
 - Loads secrets from `.env` (for secure environments)
