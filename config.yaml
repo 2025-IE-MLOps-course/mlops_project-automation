@@ -117,13 +117,18 @@ icd10_chapter_flags:
 target: OD
 
 metrics:
-  - Accuracy
-  - Precision (PPV)
-  - Recall (Sensitivity)
-  - Specificity
-  - F1 Score
-  - Negative Predictive Value (NPV)
-  - ROC AUC
+  display: # shown in model.py logs/console
+    - Accuracy
+    - F1 Score
+    - ROC AUC
+  report: # full list saved by evaluator
+    - Accuracy
+    - Precision (PPV)
+    - Specificity
+    - F1 Score
+    - Negative Predictive Value (NPV)
+    - ROC AUC
+    - Confusion Matrix
 
 preprocessing:
   rename_columns:

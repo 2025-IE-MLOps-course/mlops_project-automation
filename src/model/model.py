@@ -17,9 +17,6 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
-)
 from preprocess.preprocessing import build_preprocessing_pipeline, get_output_feature_names
 from evaluation.evaluator import evaluate_classification
 
@@ -43,35 +40,6 @@ def train_model(X_train, y_train, model_type, params):
     return model
 
 
-def evaluate_model(model, X, y, metrics):
-    y_pred = model.predict(X)
-    y_prob = model.predict_proba(X)[:, 1] if hasattr(
-        model, "predict_proba") else None
-    tn, fp, fn, tp = confusion_matrix(y, y_pred).ravel()
-    results = {}
-    for metric in metrics:
-        metric_lower = metric.lower()
-        if metric_lower == "accuracy":
-            results["Accuracy"] = accuracy_score(y, y_pred)
-        elif metric_lower in ["precision", "precision (ppv)", "positive predictive value (ppv)"]:
-            results["Precision (PPV)"] = precision_score(
-                y, y_pred, zero_division=0)
-        elif metric_lower in ["recall", "sensitivity"]:
-            results["Recall (Sensitivity)"] = recall_score(
-                y, y_pred, zero_division=0)
-        elif metric_lower == "specificity":
-            results["Specificity"] = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-        elif metric_lower == "f1 score":
-            results["F1 Score"] = f1_score(y, y_pred, zero_division=0)
-        elif metric_lower == "negative predictive value (npv)":
-            results["Negative Predictive Value (NPV)"] = tn / \
-                (tn + fn) if (tn + fn) > 0 else 0.0
-        elif metric_lower == "roc auc":
-            results["ROC AUC"] = roc_auc_score(
-                y, y_prob) if y_prob is not None else float("nan")
-    return results
-
-
 def save_artifact(obj, path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
@@ -85,8 +53,20 @@ def format_metrics(metrics: dict, ndigits: int = 2) -> dict:
 
 def run_model_pipeline(df: pd.DataFrame, config: Dict[str, Any]):
     """
-    Run the end-to-end model pipeline
-    TO DO
+    Train–validate–test workflow with strict train-only fitting for all
+    preprocessing steps.
+
+    Steps
+    -----
+    1. Split raw data into train / valid / test as configured.
+    2. Fit preprocessing pipeline on train; transform all splits.
+    3. Train the selected model type from *config['model']*.
+    4. Persist artefacts (splits, pipeline, model).
+    5. Log a configurable subset of metrics (config['metrics']['display']).
+
+    The full metric set is **not** saved here; it is generated later by
+    :pyfunc:`evaluation.evaluator.generate_report`.
+
     """
     # 1. Split data using only raw features (present in the original file)
     raw_features = config.get("raw_features", [])
@@ -168,44 +148,41 @@ def run_model_pipeline(df: pd.DataFrame, config: Dict[str, Any]):
     save_artifact(model, model_path)
 
     active = model_config.get("active", "decision_tree")
-    algo_model_path = model_config.get(active, {}).get("save_path", f"models/{active}.pkl")
+    algo_model_path = model_config.get(active, {}).get(
+        "save_path", f"models/{active}.pkl")
     save_artifact(model, algo_model_path)
 
-    # Evaluate and log/save metrics using evaluation.py
-    artifacts_cfg = config.get("artifacts", {})
-    metrics_path = artifacts_cfg.get("metrics_path", "models/metrics.json")
+    # 5. Evaluate model and log metrics
+    display_metrics = config.get("metrics", {}).get("display", [])
 
-    results_valid = evaluate_classification(
-        model, X_valid_pp.values, y_valid, config, split="validation")
-    results_test = evaluate_classification(
-        model, X_test_pp.values, y_test,  config, split="test")
+    results_valid = evaluate_classification(         # validation
+        model, X_valid_pp.values, y_valid,
+        config, metrics=display_metrics,
+        split=None, log=False,
+    )
+    results_test = evaluate_classification(         # test
+        model, X_test_pp.values, y_test,
+        config, metrics=display_metrics,
+        split=None, log=False,
+    )
 
-    def round_metrics(metrics_dict, ndigits=2):
-        rounded = {}
-        for k, v in metrics_dict.items():
-            if isinstance(v, dict):  # For nested dicts (e.g., Confusion Matrix)
-                rounded[k] = {ik: (round(iv, ndigits) if isinstance(
-                    iv, float) else iv) for ik, iv in v.items()}
+    # Round floats for nicer console reading
+    def _round(d: dict[str, Any], ndigits: int = 2) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for k, v in d.items():
+            if isinstance(v, dict):
+                out[k] = {ik: (round(iv, ndigits) if isinstance(iv, float) else iv)
+                          for ik, iv in v.items()}
             elif isinstance(v, float):
-                rounded[k] = round(v, ndigits)
+                out[k] = round(v, ndigits)
             else:
-                rounded[k] = v
-        return rounded
+                out[k] = v
+        return out
 
-    # validation_rounded = round_metrics(results_valid)
-    # test_rounded = round_metrics(results_test)
-
-    # metrics_path = config.get("artifacts", {}).get(
-    #     "metrics_path", "models/metrics.json")
-
-    # # Save both splits' metrics as one artifact
-    # os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
-    # with open(metrics_path, "w") as f:
-    #     json.dump({
-    #         "validation": validation_rounded,
-    #         "test": test_rounded
-    #     }, f, indent=2)
-    # logger.info(f"Metrics saved to {metrics_path}")
+    logger.info("Validation metrics: %s", json.dumps(
+        _round(results_valid), indent=2))
+    logger.info("Test metrics: %s",       json.dumps(
+        _round(results_test),  indent=2))
 
 
 # CLI for standalone training
