@@ -11,6 +11,8 @@ Binary classification evaluation utilities for MLOps pipelines.
 import logging
 import os
 import json
+import pickle
+import pandas as pd
 from typing import Dict, Any, Optional
 from sklearn.metrics import (
     accuracy_score,
@@ -110,3 +112,42 @@ def evaluate_classification(
     logger.info(f"Evaluation metrics{split_label}: {rounded_results}")
 
     return results
+
+
+def generate_report(
+    config: Dict[str, Any],
+    model_path: Optional[str] = None,
+    processed_dir: Optional[str] = None,
+    save_path: Optional[str] = None,
+) -> Dict[str, Dict[str, float]]:
+    """
+    Load artifacts, evaluate validation and test splits, save one JSON.
+    """
+    artifacts = config.get("artifacts", {})
+    model_path = model_path or artifacts.get("model_path", "models/model.pkl")
+    processed_dir = processed_dir or artifacts.get(
+        "processed_dir", "data/processed")
+    save_path = save_path or artifacts.get(
+        "metrics_path", "models/metrics.json")
+    target = config["target"]
+
+    with open(model_path, "rb") as fh:
+        model = pickle.load(fh)
+
+    valid_df = pd.read_csv(os.path.join(processed_dir, "valid_processed.csv"))
+    test_df = pd.read_csv(os.path.join(processed_dir, "test_processed.csv"))
+
+    valid_df = valid_df.dropna(subset=[target])
+    test_df = test_df.dropna(subset=[target])
+
+    Xv, yv = valid_df.drop(columns=[target]).values, valid_df[target].values
+    Xt, yt = test_df.drop(columns=[target]).values, test_df[target].values
+
+    rv = evaluate_classification(model, Xv, yv, config, split="validation")
+    rt = evaluate_classification(model, Xt, yt, config, split="test")
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    with open(save_path, "w") as fh:
+        json.dump({"validation": rv, "test": rt}, fh, indent=2)
+    logger.info(f"Metrics report saved to {save_path}")
+    return {"validation": rv, "test": rt}

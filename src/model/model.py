@@ -192,20 +192,20 @@ def run_model_pipeline(df: pd.DataFrame, config: Dict[str, Any]):
                 rounded[k] = v
         return rounded
 
-    validation_rounded = round_metrics(results_valid)
-    test_rounded = round_metrics(results_test)
+    # validation_rounded = round_metrics(results_valid)
+    # test_rounded = round_metrics(results_test)
 
-    metrics_path = config.get("artifacts", {}).get(
-        "metrics_path", "models/metrics.json")
+    # metrics_path = config.get("artifacts", {}).get(
+    #     "metrics_path", "models/metrics.json")
 
-    # Save both splits' metrics as one artifact
-    os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
-    with open(metrics_path, "w") as f:
-        json.dump({
-            "validation": validation_rounded,
-            "test": test_rounded
-        }, f, indent=2)
-    logger.info(f"Metrics saved to {metrics_path}")
+    # # Save both splits' metrics as one artifact
+    # os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+    # with open(metrics_path, "w") as f:
+    #     json.dump({
+    #         "validation": validation_rounded,
+    #         "test": test_rounded
+    #     }, f, indent=2)
+    # logger.info(f"Metrics saved to {metrics_path}")
 
 
 # CLI for standalone training

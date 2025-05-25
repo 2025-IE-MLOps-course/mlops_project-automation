@@ -45,7 +45,7 @@ import logging
 import os
 import sys
 from typing import Dict
-from evaluation.evaluator import evaluate_classification
+from evaluation.evaluator import evaluate_classification, generate_report
 
 import yaml
 
@@ -138,6 +138,7 @@ def main() -> None:
                                   env_path=args.env, data_stage="raw")
                 validate_data(df_raw, cfg)
             run_model_pipeline(df_raw, cfg)
+            generate_report(cfg)
 
         # 4 – batch inference --------------------------------------------
         if args.stage == "infer":
