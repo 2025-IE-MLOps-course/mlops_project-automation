@@ -202,6 +202,8 @@ def build_preprocessing_pipeline(config: Dict) -> Pipeline:
     return pipeline
 
 # Utility to fetch output feature names after fit
+
+
 def get_output_feature_names(
     preprocessor: Pipeline,
     input_features: List[str],
