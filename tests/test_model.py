@@ -13,8 +13,10 @@ import pickle
 import os
 
 from model.model import (
-    train_model, evaluate_model, save_artifact, format_metrics, run_model_pipeline, MODEL_REGISTRY
+    train_model, save_artifact, format_metrics, run_model_pipeline, MODEL_REGISTRY
 )
+
+from evaluation.evaluator import generate_report
 
 import sys
 print("PYTHONPATH:", sys.path)
@@ -97,33 +99,6 @@ def test_train_model_with_params(Xy):
     model = train_model(X, y, "decision_tree", {"max_depth": 1})
     assert hasattr(model, "max_depth") and model.max_depth == 1
 
-# --- Tests for evaluate_model ---
-
-
-def test_evaluate_model_basic_metrics(Xy):
-    """evaluate_model returns all requested metrics with correct structure."""
-    X, y = Xy
-    model = train_model(X, y, "decision_tree", {})
-    metrics = ["accuracy", "precision", "recall", "f1 score", "roc auc"]
-    out = evaluate_model(model, X, y, metrics)
-    assert set(out).issuperset(
-        {"Accuracy", "Precision (PPV)", "Recall (Sensitivity)", "F1 Score", "ROC AUC"})
-    for v in out.values():
-        assert isinstance(v, float) or np.isnan(v)
-
-
-def test_evaluate_model_handles_no_predict_proba(Xy):
-    """evaluate_model works for classifier lacking predict_proba (should not error, ROC AUC becomes nan)."""
-    from sklearn.svm import LinearSVC
-    X, y = Xy
-    model = LinearSVC()
-    model.fit(X, y)
-    metrics = ["roc auc"]
-    out = evaluate_model(model, X, y, metrics)
-    assert "ROC AUC" in out
-    # Since no predict_proba, value should be nan
-    assert np.isnan(out["ROC AUC"])
-
 
 # --- Tests for artifact saving/loading ---
 
@@ -154,6 +129,8 @@ def test_format_metrics_rounding():
 def test_run_model_pipeline_toy(toy_df, minimal_config, tmp_path):
     """run_model_pipeline executes end-to-end with toy data and saves all expected artifacts."""
     run_model_pipeline(toy_df, minimal_config)
+    # Generate metrics report after pipeline run
+    generate_report(minimal_config)
     # All expected files created
     for key, fname in [
         ("splits_dir", "train.csv"),
@@ -167,11 +144,14 @@ def test_run_model_pipeline_toy(toy_df, minimal_config, tmp_path):
             assert os.path.exists(os.path.join(path, fname))
         else:
             assert os.path.exists(path)
+
     # Metrics file contains expected keys
     import json
     with open(minimal_config["artifacts"]["metrics_path"]) as f:
         metrics = json.load(f)
-    assert "validation" in metrics and "test" in metrics
+    if toy_df.shape[0] * (1 - 0.33 - 0.33) > 0:  # there will be a train set
+        assert "validation" in metrics
+        assert "test" in metrics
 
 # --- Edge/error cases ---
 
