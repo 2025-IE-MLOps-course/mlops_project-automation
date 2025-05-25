@@ -40,6 +40,7 @@ python -m src.main `
 from __future__ import annotations
 
 import argparse
+import pandas as pd
 import logging
 import os
 import sys
@@ -143,6 +144,16 @@ def main() -> None:
                 logger.error(
                     "Inference stage requires --input_csv and --output_csv")
                 sys.exit(1)
+            # Load config and input for validation
+            input_df = None
+            try:
+                input_df = pd.read_csv(args.input_csv)
+            except Exception as exc:
+                logger.error(f"Could not load input CSV: {exc}")
+                sys.exit(1)
+            # Validate inference input
+            validate_data(input_df, cfg)
+            # Now run inference
             run_inference(args.input_csv, args.config, args.output_csv)
 
     except Exception as exc:
