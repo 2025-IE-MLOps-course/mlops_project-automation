@@ -45,6 +45,7 @@ import logging
 import os
 import sys
 from typing import Dict
+from evaluation.evaluator import evaluate_classification
 
 import yaml
 

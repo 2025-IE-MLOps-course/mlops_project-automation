@@ -5,7 +5,7 @@ Batch inference entry point.
 
 Usage
 -----
-python -m src.inference.inferencer \
+python -m src.inference.inferencer `
     data/inference/new_data.csv config.yaml data/inference/output_predictions.csv
 """
 
@@ -132,4 +132,3 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 
-# python -m src.inference.inferencer data/inference/new_data.csv config.yaml data/inference/output_predictions.csv
