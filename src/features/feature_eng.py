@@ -10,12 +10,6 @@ Feature engineering transformers for MLOps pipelines.
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 
-# ICD-10 diagnostic group flags available in the raw dataset
-ICD10_CHAPTER_FLAGS = [
-    "A", "B", "C", "D", "E", "F", "H", "I", "J",
-    "K", "L", "M", "N", "R", "S", "T", "V"
-]
-
 
 class RiskScore(BaseEstimator, TransformerMixin):
     """
@@ -32,6 +26,9 @@ class RiskScore(BaseEstimator, TransformerMixin):
         ])
     """
 
+    def __init__(self, icd10_flags):
+        self.icd10_flags = icd10_flags
+
     def fit(self, X, y=None):
         # No fitting necessary
         return self
@@ -40,13 +37,14 @@ class RiskScore(BaseEstimator, TransformerMixin):
         X = X.copy()
 
         # Ensure every ICD-10 flag column exists
-        for col in ICD10_CHAPTER_FLAGS:
+        for col in self.icd10_flags:
             if col not in X.columns:
                 X[col] = 0
 
         # Coerce to numeric; strings become NaN → fill with 0
         icd_numeric = (
-            X[ICD10_CHAPTER_FLAGS]
+            X[self.icd10_flags if isinstance(self.icd10_flags, list) else [
+                self.icd10_flags]]
             .apply(pd.to_numeric, errors="coerce")
             .fillna(0)
         )
@@ -57,17 +55,19 @@ class RiskScore(BaseEstimator, TransformerMixin):
 # Template for future engineered features:
 # class MyFeatureTransformer(BaseEstimator, TransformerMixin):
 #     """
-#     Short description and academic motivation
+#     Short description and academic motivation.
+#     If this transformer depends on config (e.g., feature names), pass them as constructor arguments.
 #     """
+#     def __init__(self, param_from_config):
+#         self.param_from_config = param_from_config
 #     def fit(self, X, y=None):
 #         return self
 #     def transform(self, X):
 #         X = X.copy()
-#         # Feature engineering logic here
+#         # Feature engineering logic here, using self.param_from_config if needed
 #         return X
 
 
-# Registry of feature transformers (for flexible pipeline construction)
 FEATURE_TRANSFORMERS = {
-    "risk_score": RiskScore
+    "risk_score": lambda config: RiskScore(config["icd10_chapter_flags"])
 }

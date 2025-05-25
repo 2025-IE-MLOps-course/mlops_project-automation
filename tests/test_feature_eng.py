@@ -17,6 +17,7 @@ This test covers the risk_score feature, a sum of ICD-10 flags (proxy for patien
 import pandas as pd
 from features.feature_eng import RiskScore
 
+
 def test_risk_score_basic():
     """
     Test that RiskScore transformer correctly sums ICD-10 flags into the risk_score feature.
@@ -31,12 +32,13 @@ def test_risk_score_basic():
     - Supports reproducible, tested ML code as required in production and academic workflows
     """
     # Construct minimal DataFrame: each ICD flag column, two rows (all 1s, all 0s)
-    df = pd.DataFrame({k: [1, 0] for k in [
+    flags = [
         "A", "B", "C", "D", "E", "F", "H", "I", "J",
-        "K", "L", "M", "N", "R", "S", "T", "V"]})
+        "K", "L", "M", "N", "R", "S", "T", "V"
+    ]
     # Apply transformer
-    out = RiskScore().fit_transform(df)
-    # Test output
-    assert "risk_score" in out.columns, "Output missing 'risk_score' column"
-    assert out["risk_score"].iloc[0] == 17, "Sum should be 17 for all 1s"
-    assert out["risk_score"].iloc[1] == 0, "Sum should be 0 for all 0s"
+    df = pd.DataFrame({k: [1, 0] for k in flags})
+    out = RiskScore(flags).transform(df)
+    assert "risk_score" in out.columns
+    assert out["risk_score"].iloc[0] == len(flags)
+    assert out["risk_score"].iloc[1] == 0

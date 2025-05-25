@@ -95,6 +95,25 @@ features:
     - T
     - V
 
+icd10_chapter_flags:
+  - A
+  - B
+  - C
+  - D
+  - E
+  - F
+  - H
+  - I
+  - J
+  - K
+  - L
+  - M
+  - N
+  - R
+  - S
+  - T
+  - V
+
 target: OD
 
 metrics:

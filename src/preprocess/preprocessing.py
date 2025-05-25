@@ -189,15 +189,17 @@ def build_preprocessing_pipeline(config: Dict) -> Pipeline:
         verbose_feature_names_out=False,
     )
 
+    # 5. Create the full pipeline
+    icd10_flags = config.get("icd10_chapter_flags", [])
     pipeline = Pipeline(
         steps=[
-            ("risk_score", RiskScore()),  # Add risk score feature
-            ("rename", ColumnRenamer(rename_map)),  # Must run first
+            ("risk_score", RiskScore(icd10_flags)),  # Pass flags from config
+            ("rename", ColumnRenamer(rename_map)),
             ("col_transform", col_transformer),
         ]
     )
-    return pipeline
 
+    return pipeline
 
 # Utility to fetch output feature names after fit
 def get_output_feature_names(
