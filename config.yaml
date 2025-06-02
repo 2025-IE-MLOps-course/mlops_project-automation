@@ -1,5 +1,10 @@
 # This file is used to set up the parameters for data loading, logging, and other settings.
 
+main:
+  WANDB_PROJECT: opioid_mlops_project
+  WANDB_ENTITY: idiazl  # Replace with your actual wandb entity/team
+  steps: all  # e.g., "data_load,data_validation,train_model"
+
 data_source:
   raw_path: "./data/raw/opiod_raw_data.csv" # Relative or absolute path to data file
   processed_path: "./data/processed/opiod_processed_data.csv" # Path to save processed data
