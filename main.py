@@ -64,6 +64,10 @@ import hydra
 from omegaconf import DictConfig
 from dotenv import load_dotenv
 
+# Ensure the src directory is in the Python path
+root_dir = hydra.utils.get_original_cwd()
+config_path = os.path.join(root_dir, "config.yaml")
+
 load_dotenv()  # Loads .env file if present
 
 # Define pipeline steps in order. Extend this list as new steps are added.

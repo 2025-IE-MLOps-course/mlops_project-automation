@@ -13,6 +13,10 @@ from omegaconf import DictConfig
 from datetime import datetime
 from data_loader import get_data
 
+# Ensure the src directory is in the Python path
+root_dir = hydra.utils.get_original_cwd()
+config_path = os.path.join(root_dir, "config.yaml")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
