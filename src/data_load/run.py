@@ -12,7 +12,9 @@ import wandb
 from omegaconf import DictConfig
 from datetime import datetime
 from data_loader import get_data
+from dotenv import load_dotenv
 
+load_dotenv()  # Load environment variables from .env file if present
 
 # Configure logging
 logging.basicConfig(
@@ -23,15 +25,16 @@ logging.basicConfig(
 logger = logging.getLogger("data_load")
 
 
-@hydra.main(config_path=".", config_name="config", version_base=None)
+@hydra.main(config_path="../../", config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
     """
     Loads data for the MLOps pipeline with config and artifact tracking.
     Logs summary stats and sample artifacts to Weights & Biases.
     """
+    # Get parameters from grouped config (data_load)
+    output_dir = cfg.data_load.output_dir
+    data_stage = cfg.data_load.data_stage
 
-    # Get parameters from Hydra config (allowing CLI/MLflow overrides)
-    output_dir = cfg.get("output_dir", "artifacts")
     dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     data_file = str(cfg.data_source.get("raw_path", "unknown")).split("/")[-1]
     run_name = f"data_load_{dt_str}_{data_file}"
@@ -57,7 +60,7 @@ def main(cfg: DictConfig) -> None:
         df = get_data(
             config_path=getattr(cfg, "config_path", "config.yaml"),
             env_path=getattr(cfg, "env_path", ".env"),
-            data_stage=getattr(cfg, "data_stage", "raw"),
+            data_stage=data_stage,
         )
         if df.empty:
             logger.warning("Loaded dataframe is empty: %s", output_path)
