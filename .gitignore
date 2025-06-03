@@ -43,3 +43,4 @@ Thumbs.db
 # VSCode and other IDE config
 .vscode/
 .idea/
+/data
