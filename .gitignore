@@ -29,6 +29,7 @@ logs/
 data/processed/
 data/splits/
 data/raw/
+data/inference/
 
 # OS files
 .DS_Store
