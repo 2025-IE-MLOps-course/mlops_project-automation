@@ -18,6 +18,7 @@ dependencies:
   - hydra-core           # Core library for Hydra configuration management
   - omegaconf            # Configuration management library for structured configs
   - dvc                  # Data Version Control for managing ML datasets and models
+  - awscli
   - pip:
       - pytest-cov==6.1.1  # Test coverage reporting for code quality and completeness
       - black==25.1.0      # Code formatting to enforce style and readability
