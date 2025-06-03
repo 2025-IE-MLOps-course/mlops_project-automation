@@ -56,7 +56,6 @@ Author: Ivan Diaz
 """
 
 
-import json
 import mlflow
 import tempfile
 import os
@@ -64,9 +63,6 @@ import hydra
 from omegaconf import DictConfig
 from dotenv import load_dotenv
 
-# Ensure the src directory is in the Python path
-root_dir = hydra.utils.get_original_cwd()
-config_path = os.path.join(root_dir, "config.yaml")
 
 load_dotenv()  # Loads .env file if present
 
@@ -78,7 +74,7 @@ _steps = [
     "feature_eng",
     "train_model",
     "evaluate_model",
-    "inference"
+    # "inference"
 ]
 
 
@@ -90,6 +86,7 @@ def main(config: DictConfig):
     Configuration and workspace isolation are handled per step.
     All experiment tracking is handled inside each step via Wandb.
     """
+
     # Setup Wandb environment variables (ensure these are in config.yaml or .env)
     os.environ["WANDB_PROJECT"] = config["main"]["WANDB_PROJECT"]
     os.environ["WANDB_ENTITY"] = config["main"]["WANDB_ENTITY"]
@@ -109,8 +106,8 @@ def main(config: DictConfig):
                              "src", "data_load"),
                 "main",
                 parameters={
-                    "config": os.path.abspath(hydra.utils.get_original_cwd() + "/config.yaml"),
-                    "tmp_dir": tmp_dir
+                    "data_stage": config.get("data_stage", "raw"),
+                    "output_dir": os.path.abspath(config.get("output_dir", "artifacts")),
                 }
             )
 

@@ -13,9 +13,6 @@ from omegaconf import DictConfig
 from datetime import datetime
 from data_loader import get_data
 
-# Ensure the src directory is in the Python path
-root_dir = hydra.utils.get_original_cwd()
-config_path = os.path.join(root_dir, "config.yaml")
 
 # Configure logging
 logging.basicConfig(
@@ -32,6 +29,9 @@ def main(cfg: DictConfig) -> None:
     Loads data for the MLOps pipeline with config and artifact tracking.
     Logs summary stats and sample artifacts to Weights & Biases.
     """
+
+    # Get parameters from Hydra config (allowing CLI/MLflow overrides)
+    output_dir = cfg.get("output_dir", "artifacts")
     dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     data_file = str(cfg.data_source.get("raw_path", "unknown")).split("/")[-1]
     run_name = f"data_load_{dt_str}_{data_file}"
@@ -48,7 +48,6 @@ def main(cfg: DictConfig) -> None:
     logger.info("Started WandB run: %s", run_name)
 
     # Ensure output dir exists
-    output_dir = cfg.get("output_dir", "artifacts")
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, "data_loaded.csv")
     sample_path = os.path.join(output_dir, "data_sample.csv")

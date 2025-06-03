@@ -5,13 +5,7 @@ conda_env: conda.yml
 entry_points:
   main:
     parameters:
-      config: { type: str, default: "../../config.yaml" }
-      env_path: { type: str, default: "../../.env" }
       data_stage: { type: str, default: "raw" }
       output_dir: { type: str, default: "../../artifacts" }
     command: >
-      python run.py
-      --config ${config}
-      --env_path ${env_path}
-      --data_stage ${data_stage}
-      --output_dir ${output_dir}
+      python run.py data_stage=${data_stage} output_dir=${output_dir}
