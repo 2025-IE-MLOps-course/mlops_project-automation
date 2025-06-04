@@ -23,9 +23,9 @@ def main(cfg: DictConfig):
     os.environ["WANDB_PROJECT"] = cfg.main.WANDB_PROJECT
     os.environ["WANDB_ENTITY"] = cfg.main.WANDB_ENTITY
 
-    steps = cfg.main.steps
-    active_steps = [s.strip() for s in steps.split(
-        ",")] if steps != "all" else PIPELINE_STEPS
+    steps_raw = cfg.main.steps
+    active_steps = [s.strip() for s in steps_raw.split(",") if s.strip()] \
+        if steps_raw != "all" else PIPELINE_STEPS
 
     hydra_override = cfg.main.hydra_options if hasattr(
         cfg.main, "hydra_options") else ""
@@ -34,15 +34,14 @@ def main(cfg: DictConfig):
         for step in active_steps:
             step_dir = os.path.join(
                 hydra.utils.get_original_cwd(), "src", step)
-            step_hydra_options = hydra_override
+
+            # Only pass hydra_options if it is non-empty
+            params = {}
+            if hydra_override:
+                params["hydra_options"] = hydra_override
+
             print(f"Running step: {step}")
-            mlflow.run(
-                step_dir,
-                "main",
-                parameters={
-                    "hydra_options": step_hydra_options
-                }
-            )
+            mlflow.run(step_dir, "main", parameters=params)
 
 
 if __name__ == "__main__":
