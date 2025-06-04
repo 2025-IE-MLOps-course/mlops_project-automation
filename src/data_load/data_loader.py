@@ -4,8 +4,8 @@ data_loader.py
 Modular data ingestion utility for CSV and Excel files.
 - Loads configuration from config.yaml
 - Loads secrets from .env (using python-dotenv)
-- Supports robust error handling and logging (configured by main.py)
-- Designed for production and as a teaching example for MLOps best practices
+- Robust error handling and logging (configured by main.py)
+- Production-ready and MLOps teaching example
 """
 
 import os
@@ -16,20 +16,27 @@ from dotenv import load_dotenv
 from typing import Optional
 from pathlib import Path
 
-
 logger = logging.getLogger(__name__)
 
 
 def load_config(config_path: str = "config.yaml") -> dict:
+    """
+    Loads configuration from the given YAML file.
+    """
     if not os.path.isfile(config_path):
         raise FileNotFoundError(f"Config file not found: {config_path}")
+    logger.info(f"Loading config from: {config_path}")
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     return config
 
 
 def load_env(env_path: str = ".env"):
+    """
+    Loads environment variables from .env file.
+    """
     load_dotenv(dotenv_path=env_path, override=True)
+    logger.info(f"Loaded environment from: {env_path}")
 
 
 def load_data(
@@ -40,6 +47,9 @@ def load_data(
     header: int = 0,
     encoding: str = "utf-8"
 ) -> pd.DataFrame:
+    """
+    Loads data from CSV or Excel, with error handling and logging.
+    """
     if not path or not isinstance(path, str):
         logger.error("No valid data path specified in configuration.")
         raise ValueError("No valid data path specified in configuration.")
@@ -72,6 +82,9 @@ def get_data(
     env_path: str = ".env",
     data_stage: str = "raw"
 ) -> pd.DataFrame:
+    """
+    Main entry: Loads env, config, resolves path, loads data for the requested stage.
+    """
     load_env(env_path)
     config = load_config(config_path)
     data_cfg = config.get("data_source", {})
@@ -88,17 +101,28 @@ def get_data(
         raise ValueError(
             f"No valid data path specified in configuration for data_stage='{data_stage}'.")
 
-    base_dir = Path(config_path).resolve().parent      # repo root
-    path = (base_dir / path).resolve() if not Path(path).is_absolute() else Path(path)
+    base_dir = Path(config_path).resolve().parent
+    resolved_path = (
+        base_dir / path).resolve() if not Path(path).is_absolute() else Path(path)
 
-    df = load_data(
-        path=str(path),
-        file_type=data_cfg.get("type", "csv"),
-        sheet_name=data_cfg.get("sheet_name"),
-        delimiter=data_cfg.get("delimiter", ","),
-        header=data_cfg.get("header", 0),
-        encoding=data_cfg.get("encoding", "utf-8"),
-    )
+    # Only pass sheet_name if Excel
+    if data_cfg.get("type", "csv") == "excel":
+        df = load_data(
+            path=str(resolved_path),
+            file_type=data_cfg.get("type", "csv"),
+            sheet_name=data_cfg.get("sheet_name"),
+            delimiter=data_cfg.get("delimiter", ","),
+            header=data_cfg.get("header", 0),
+            encoding=data_cfg.get("encoding", "utf-8"),
+        )
+    else:
+        df = load_data(
+            path=str(resolved_path),
+            file_type=data_cfg.get("type", "csv"),
+            delimiter=data_cfg.get("delimiter", ","),
+            header=data_cfg.get("header", 0),
+            encoding=data_cfg.get("encoding", "utf-8"),
+        )
     return df
 
 

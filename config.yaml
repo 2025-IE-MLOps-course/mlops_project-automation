@@ -1,23 +1,25 @@
-# This file is used to set up the parameters for data loading, logging, and other settings.
+# config.yaml
+# All pipeline configuration lives here. Override any parameter via Hydra CLI or MLflow hydra_options.
 main:
   WANDB_PROJECT: opioid_mlops_project
   WANDB_ENTITY: idiazl  # Replace with your actual wandb entity/team
-  steps: all  # e.g., "data_load,data_validation,train_model"
+  steps: all            # e.g., "data_load,data_validation,train_model"
+  hydra_options: ""     # Add this line for CLI/MLflow runtime overrides
 
 data_source:
-  raw_path: "./data/raw/opiod_raw_data.csv" # Relative or absolute path to data file
-  processed_path: "./data/processed/opiod_processed_data.csv" # Path to save processed data
-  type: "csv"                      # Data file type: 'csv' or 'excel'
-  sheet_name: "Sheet1"             # Only used if type == 'excel'
-  delimiter: ","                   # Only used if type == 'csv'
-  header: 0                        # Row number to use as column names (0-indexed), update if needed
-  encoding: "utf-8"                # File encoding (utf-8 covers most cases)
+  raw_path: "./data/raw/opiod_raw_data.csv" # Relative to project root
+  processed_path: "./data/processed/opiod_processed_data.csv"
+  type: "csv"
+  sheet_name: "Sheet1"       # Only used if type == 'excel'
+  delimiter: ","             # Only used if type == 'csv'
+  header: 0
+  encoding: "utf-8"
 
 logging:
-  level: "INFO"                         # Logging level: DEBUG (verbose), INFO (default), WARNING, ERROR, CRITICAL
-  log_file: "./logs/main.log"    # File path for log output
-  format: "%(asctime)s - %(levelname)s - %(name)s - %(message)s"  # Log message format
-  datefmt: "%Y-%m-%d %H:%M:%S"          # Date format for logs
+  level: "INFO"
+  log_file: "./logs/main.log"
+  format: "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+  datefmt: "%Y-%m-%d %H:%M:%S"
 
 data_split:
   test_size: 0.2
@@ -25,14 +27,12 @@ data_split:
   random_state: 42
 
 model:
-  active: decision_tree  # Options: decision_tree, logistic_regression, random_forest
-
+  active: decision_tree
   decision_tree:
     save_path: models/decision_tree.pkl
     params:
       max_depth: 4
       random_state: 42
-
   logistic_regression:
     save_path: models/logistic_regression.pkl
     params:
@@ -40,7 +40,6 @@ model:
       solver: lbfgs
       random_state: 42
       max_iter: 200
-
   random_forest:
     save_path: models/random_forest.pkl
     params:
@@ -67,7 +66,6 @@ raw_features:
   - S
   - T
   - V
-
 
 features:
   continuous:
@@ -121,11 +119,11 @@ icd10_chapter_flags:
 target: OD
 
 metrics:
-  display: # shown in model.py logs/console
+  display:
     - Accuracy
     - F1 Score
     - ROC AUC
-  report: # full list saved by evaluator
+  report:
     - Accuracy
     - Precision (PPV)
     - Specificity
@@ -152,7 +150,7 @@ artifacts:
 
 data_validation:
   enabled: true
-  action_on_error: "raise"  # options: raise, warn
+  action_on_error: "raise"
   report_path: "logs/validation_report.json"
   schema:
     columns:
@@ -176,7 +174,7 @@ data_validation:
         dtype: "int"
         required: true
         min: 0
-        max: 2000    # Set upper bound based on domain knowledge; adjust as needed
+        max: 2000
       - name: "A"
         dtype: "int"
         required: true
@@ -247,8 +245,8 @@ data_validation:
         allowed_values: [0, 1]
 
 data_load:
-  data_stage: "raw"  # Stage of data to load: raw, processed, or both
-  output_dir: "artifacts"  # Directory to save processed data and artifacts
-  log_artifacts: true       # Whether to log artifacts to W&B
-  log_summary_stats: true   # Whether to log summary statistics to W&B
-  log_sample_artifacts: true # Whether to log sample artifacts (e.g., first few rows) to W&B
+  data_stage: "raw"
+  output_dir: "artifacts"
+  log_artifacts: true
+  log_summary_stats: true
+  log_sample_artifacts: true

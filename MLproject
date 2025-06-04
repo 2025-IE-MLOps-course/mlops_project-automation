@@ -1,17 +1,11 @@
-name: opioid_mlops_pipeline
+name: mlops_pipeline
 
-conda_env: conda.yml
+conda_env: conda.yaml
 
 entry_points:
   main:
     parameters:
-      steps:
-        description: Comma-separated list of steps to execute (useful for debugging)
-        type: str
-        default: all
-      hydra_options:
-        description: Other Hydra-style configuration overrides (optional)
-        type: str
-        default: ""
+      steps: {type: str, default: "all"}
+      hydra_options: {type: str, default: ""}
     command: >
-      python main.py main.steps=\'{steps}\' $(echo {hydra_options})
+      python main.py main.steps=${steps} main.hydra_options=${hydra_options}

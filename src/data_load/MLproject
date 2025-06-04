@@ -1,11 +1,10 @@
 name: data_load
 
-conda_env: conda.yml
+conda_env: conda.yaml
 
 entry_points:
   main:
     parameters:
-      data_stage: {type: str, default: raw}
-      output_dir: {type: str, default: artifacts}
+      hydra_options: {type: str, default: ""}
     command: >
-      python run.py data_load.data_stage={data_stage} data_load.output_dir={output_dir}
+      python run.py ${hydra_options}
