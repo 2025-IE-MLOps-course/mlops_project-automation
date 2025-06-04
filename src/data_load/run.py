@@ -7,12 +7,15 @@ import os
 import sys
 import logging
 import hydra
+from hydra.utils import get_original_cwd
 import pandas as pd
 import wandb
 from omegaconf import DictConfig
 from datetime import datetime
 from data_loader import get_data
 from dotenv import load_dotenv
+from pathlib import Path
+
 
 load_dotenv()  # Load environment variables from .env file if present
 
@@ -32,6 +35,8 @@ def main(cfg: DictConfig) -> None:
     Logs summary stats and sample artifacts to Weights & Biases.
     """
     # Get parameters from grouped config (data_load)
+    repo_root = Path(get_original_cwd()).resolve().parent.parent
+    cfg_path = repo_root / "config.yaml"
     output_dir = cfg.data_load.output_dir
     data_stage = cfg.data_load.data_stage
 
@@ -58,7 +63,7 @@ def main(cfg: DictConfig) -> None:
     try:
         # Load data with environment variable fallback
         df = get_data(
-            config_path=getattr(cfg, "config_path", "config.yaml"),
+            config_path=str(cfg_path),              
             env_path=getattr(cfg, "env_path", ".env"),
             data_stage=data_stage,
         )

@@ -106,8 +106,9 @@ def main(config: DictConfig):
                              "src", "data_load"),
                 "main",
                 parameters={
-                    "data_load.data_stage": config["data_load"]["data_stage"],
-                    "data_load.output_dir": config["data_load"]["output_dir"],
+                    "data_stage": config["data_load"]["data_stage"],
+                    "output_dir": config["data_load"]["output_dir"],
+
                 }
             )
 

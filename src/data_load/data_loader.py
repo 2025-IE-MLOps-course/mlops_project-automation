@@ -14,6 +14,8 @@ import pandas as pd
 import yaml
 from dotenv import load_dotenv
 from typing import Optional
+from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +87,12 @@ def get_data(
             "No valid data path specified in configuration for data_stage='%s'.", data_stage)
         raise ValueError(
             f"No valid data path specified in configuration for data_stage='{data_stage}'.")
+
+    base_dir = Path(config_path).resolve().parent      # repo root
+    path = (base_dir / path).resolve() if not Path(path).is_absolute() else Path(path)
+
     df = load_data(
-        path=path,
+        path=str(path),
         file_type=data_cfg.get("type", "csv"),
         sheet_name=data_cfg.get("sheet_name"),
         delimiter=data_cfg.get("delimiter", ","),
