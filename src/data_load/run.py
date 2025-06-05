@@ -23,23 +23,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger("data_load")
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-@hydra.main(config_path="../../", config_name="config", version_base=None)
+
+@hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
-    # Resolve repo root and config paths robustly
-    project_root = Path(__file__).resolve().parents[2]
-    config_path = project_root / "config.yaml"
+    # Config path, output directory, and data file are all resolved from repo root
+    config_path = PROJECT_ROOT / "config.yaml"
 
-    # Output directory (absolute)
-    output_dir = Path(cfg.data_load.output_dir)
-    if not output_dir.is_absolute():
-        output_dir = project_root / output_dir
+    output_dir = PROJECT_ROOT / cfg.data_load.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Raw data path (absolute)
     raw_path_cfg = Path(cfg.data_source.raw_path)
     resolved_raw_path = (
-        raw_path_cfg if raw_path_cfg.is_absolute() else project_root / raw_path_cfg
+        raw_path_cfg if raw_path_cfg.is_absolute() else PROJECT_ROOT / raw_path_cfg
     )
     if not resolved_raw_path.is_file():
         raise FileNotFoundError(f"Data file not found: {resolved_raw_path}")
@@ -73,7 +70,7 @@ def main(cfg: DictConfig) -> None:
             logger.warning(
                 f"Duplicates found in data ({dup_count} rows). Consider removing them before use.")
 
-        # --- W&B logging (honor config flags) ---
+        # W&B logging (conditional via config)
         if cfg.data_load.get("log_sample_artifacts", True):
             sample_tbl = wandb.Table(dataframe=df.head(100))
             wandb.log({"sample_rows": sample_tbl})
@@ -83,18 +80,15 @@ def main(cfg: DictConfig) -> None:
                 include="all").T.reset_index())
             wandb.log({"summary_stats": stats_tbl})
 
-        # Log raw data as artifact (reference or file)
         if cfg.data_load.get("log_artifacts", True):
             raw_art = wandb.Artifact(f"raw_data_{run.id[:8]}", type="dataset")
             try:
-                # Must be a URI for add_reference (wandb>=0.16)
                 raw_art.add_reference(f"file://{resolved_raw_path}")
             except Exception:
                 raw_art.add_file(str(resolved_raw_path))
             wandb.log_artifact(raw_art)
             logger.info("Logged raw data artifact to WandB")
 
-        # Log simple metrics summary
         wandb.summary.update({
             "n_rows": df.shape[0],
             "n_cols": df.shape[1],
