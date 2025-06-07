@@ -10,8 +10,8 @@ load_dotenv()  # Only for secrets
 PIPELINE_STEPS = [
     "data_load",
     "data_validation",
-    "preprocessing",
     "feature_eng",
+    "preprocessing",
     "train_model",
     "evaluate_model",
     # "inference"
