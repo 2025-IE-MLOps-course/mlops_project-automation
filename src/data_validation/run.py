@@ -12,10 +12,16 @@ from omegaconf import DictConfig
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from data_loader import get_data
-from data_validator import validate_data
 import json
 import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_ROOT = PROJECT_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from data_load.data_loader import get_data
+from data_validation.data_validator import validate_data
 
 load_dotenv() 
 
@@ -25,8 +31,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger("data_validation")
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
