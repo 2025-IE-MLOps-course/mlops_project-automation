@@ -12,14 +12,12 @@ from omegaconf import DictConfig
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-
 from data_loader import get_data
 from data_validator import validate_data
-
 import json
 import yaml
 
-load_dotenv()
+load_dotenv() 
 
 logging.basicConfig(
     level=logging.INFO,

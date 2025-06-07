@@ -6,4 +6,4 @@ entry_points:
   main:
     parameters: {}
     command: >
-      python -m src.data_validation.run
+      python run.py
