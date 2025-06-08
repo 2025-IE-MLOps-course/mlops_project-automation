@@ -16,11 +16,10 @@ This repository provides a modular, **production-quality** MLOps pipeline for bi
 - Extensive unit testing with pytest
 - Strict adherence to software engineering and MLOps best practices
 
-**Planned Phase 2: Automation and Full MLOps Integration**
-- Experiment tracking with MLflow and/or Weights & Biases (W&B)
-- Automated CI/CD using GitHub Actions
-- Dynamic configuration with Hydra
-- End-to-end workflow orchestration
+**Phase 2: Hydra, MLflow, and W&B Integration**
+- All pipeline steps now execute as MLflow runs
+- Dynamic configuration managed with Hydra
+- Metrics and artifacts automatically logged to Weights & Biases
 
 ---
 
@@ -129,6 +128,9 @@ conda env create -f environment.yml
 conda activate mlops_project
 ./setup.sh  # install all dependencies for testing
 dvc pull     # download project data
+wandb login  # authenticate with Weights & Biases
+export WANDB_PROJECT=opioid_mlops_project
+export WANDB_ENTITY=<your-wandb-entity>
 ```
 
 **Run end-to-end pipeline:**
@@ -137,9 +139,11 @@ dvc pull     # download project data
 python main.py main.steps=all
 # or using MLflow
 mlflow run . -P steps=all
-# override model hyperparameters (Hydra syntax)
-python main.py main.steps=model main.hydra_options='model.decision_tree.params.max_depth=6 model.decision_tree.params.min_samples_split=3'
+# run the model step with Hydra overrides
+python src/model/run.py model.decision_tree.params.max_depth=6 model.decision_tree.params.min_samples_split=3
+mlflow run src/model -P hydra_options='model.decision_tree.params.max_depth=6 model.decision_tree.params.min_samples_split=3'
 ```
+All steps log metrics and artifacts to W&B by default.
 
 **Run inference from any server (after cloning repo and installing dependencies):**
 ```bash
@@ -155,9 +159,9 @@ pytest
 
 ## 📈 Next Steps (Planned Enhancements)
 
-- **Experiment Tracking:** Integrate MLflow and/or Weights & Biases for automated tracking of parameters, metrics, and artifacts
+- **Experiment Tracking:** Extend W&B dashboards and MLflow artifact management
 - **CI/CD Automation:** Add GitHub Actions for linting, testing, and pipeline automation
-- **Dynamic Configuration:** Migrate to Hydra for flexible multi-environment settings
+- **Dynamic Configuration:** Leverage Hydra for advanced multi-environment settings
 - **Production Monitoring:** Add robust logging, alerting, and drift monitoring tools
 
 ---
