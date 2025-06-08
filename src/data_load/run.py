@@ -61,7 +61,8 @@ def main(cfg: DictConfig) -> None:
         data_stage = cfg.data_load.data_stage
         df = get_data(
             config_path=config_path,
-            data_stage=data_stage
+            data_stage=data_stage,
+            env_path=None  # already loaded above
         )
         if df.empty:
             logger.warning("Loaded dataframe is empty: %s", resolved_raw_path)
