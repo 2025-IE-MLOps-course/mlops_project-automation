@@ -17,6 +17,9 @@ PIPELINE_STEPS = [
     # "inference"
 ]
 
+# Only these steps accept Hydra overrides via MLflow parameters
+STEPS_WITH_OVERRIDES = {"train_model"}
+
 
 @hydra.main(config_name="config", config_path=".", version_base=None)
 def main(cfg: DictConfig):
@@ -35,9 +38,8 @@ def main(cfg: DictConfig):
             step_dir = os.path.join(
                 hydra.utils.get_original_cwd(), "src", step)
 
-            # Only pass hydra_options if it is non-empty
             params = {}
-            if hydra_override:
+            if hydra_override and step in STEPS_WITH_OVERRIDES:
                 params["hydra_options"] = hydra_override
 
             print(f"Running step: {step}")
