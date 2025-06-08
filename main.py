@@ -10,15 +10,15 @@ load_dotenv()  # Only for secrets
 PIPELINE_STEPS = [
     "data_load",
     "data_validation",
-    "feature_eng",
-    "preprocessing",
-    "train_model",
-    "evaluate_model",
+    "features",
+    "preprocess",
+    "model",
+    "evaluation",
     # "inference"
 ]
 
 # Only these steps accept Hydra overrides via MLflow parameters
-STEPS_WITH_OVERRIDES = {"train_model"}
+STEPS_WITH_OVERRIDES = {}
 
 
 @hydra.main(config_name="config", config_path=".", version_base=None)
