@@ -143,6 +143,12 @@ mlflow run . -P steps=all
 python src/model/run.py model.decision_tree.params.max_depth=6 model.decision_tree.params.min_samples_split=3
 mlflow run src/model -P hydra_options='model.decision_tree.params.max_depth=6 model.decision_tree.params.min_samples_split=3'
 ```
+To override hyperparameters in the `model` step, pass them through the
+`hydra_options` parameter when launching the run with MLflow. For example:
+
+```bash
+mlflow run src/model -P hydra_options="model.decision_tree.params.max_depth=8 model.decision_tree.params.min_samples_split=3"
+```
 All steps log metrics and artifacts to W&B by default.
 
 **Run inference from any server (after cloning repo and installing dependencies):**
