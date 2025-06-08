@@ -12,6 +12,7 @@ import logging
 import json
 import pickle
 from typing import Dict, Any
+from pathlib import Path
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
@@ -22,6 +23,16 @@ from evaluation.evaluator import evaluate_classification
 
 
 logger = logging.getLogger(__name__)
+
+# Resolve project root two levels above this file so that artifact paths
+# defined in config can be resolved relative to the repository.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _resolve(path: str | Path) -> Path:
+    """Return absolute path relative to PROJECT_ROOT if not already absolute."""
+    p = Path(path)
+    return p if p.is_absolute() else PROJECT_ROOT / p
 
 MODEL_REGISTRY = {
     "decision_tree": DecisionTreeClassifier,
@@ -88,14 +99,19 @@ def run_model_pipeline(df: pd.DataFrame, config: Dict[str, Any]):
         X_temp, y_temp, test_size=rel_valid, random_state=random_state, stratify=y_temp
     )
     # --- Save raw data splits ---
-    splits_dir = config.get("artifacts", {}).get("splits_dir", "data/splits")
-    os.makedirs(splits_dir, exist_ok=True)
-    X_train.assign(
-        **{target: y_train}).to_csv(os.path.join(splits_dir, "train.csv"), index=False)
-    X_valid.assign(
-        **{target: y_valid}).to_csv(os.path.join(splits_dir, "valid.csv"), index=False)
-    X_test.assign(**{target: y_test}
-                  ).to_csv(os.path.join(splits_dir, "test.csv"), index=False)
+    splits_dir = _resolve(
+        config.get("artifacts", {}).get("splits_dir", "data/splits")
+    )
+    splits_dir.mkdir(parents=True, exist_ok=True)
+    X_train.assign(**{target: y_train}).to_csv(
+        splits_dir / "train.csv", index=False
+    )
+    X_valid.assign(**{target: y_valid}).to_csv(
+        splits_dir / "valid.csv", index=False
+    )
+    X_test.assign(**{target: y_test}).to_csv(
+        splits_dir / "test.csv", index=False
+    )
 
     # 2. Fit preprocessing pipeline on X_train, transform all splits
     preprocessor = build_preprocessing_pipeline(config)
@@ -119,20 +135,27 @@ def run_model_pipeline(df: pd.DataFrame, config: Dict[str, Any]):
     X_test_pp = X_test_pp[input_features]
 
     # Save processed data splits
-    processed_dir = config.get("artifacts", {}).get(
-        "processed_dir", "data/processed")
-    os.makedirs(processed_dir, exist_ok=True)
+    processed_dir = _resolve(
+        config.get("artifacts", {}).get("processed_dir", "data/processed")
+    )
+    processed_dir.mkdir(parents=True, exist_ok=True)
     X_train_pp.assign(**{target: y_train}).to_csv(
-        os.path.join(processed_dir, "train_processed.csv"), index=False)
+        processed_dir / "train_processed.csv", index=False
+    )
     X_valid_pp.assign(**{target: y_valid}).to_csv(
-        os.path.join(processed_dir, "valid_processed.csv"), index=False)
-    X_test_pp.assign(
-        **{target: y_test}).to_csv(os.path.join(processed_dir, "test_processed.csv"), index=False)
+        processed_dir / "valid_processed.csv", index=False
+    )
+    X_test_pp.assign(**{target: y_test}).to_csv(
+        processed_dir / "test_processed.csv", index=False
+    )
 
     # Save preprocessing pipeline artifact
-    preproc_path = config.get("artifacts", {}).get(
-        "preprocessing_pipeline", "models/preprocessing_pipeline.pkl")
-    save_artifact(preprocessor, preproc_path)
+    preproc_path = _resolve(
+        config.get("artifacts", {}).get(
+            "preprocessing_pipeline", "models/preprocessing_pipeline.pkl"
+        )
+    )
+    save_artifact(preprocessor, str(preproc_path))
 
     # Train model
     model_config = config["model"]
@@ -143,14 +166,16 @@ def run_model_pipeline(df: pd.DataFrame, config: Dict[str, Any]):
     model = train_model(X_train_pp.values, y_train, model_type, params)
 
     # Save model artifact
-    model_path = config.get("artifacts", {}).get(
-        "model_path", "models/model.pkl")
-    save_artifact(model, model_path)
+    model_path = _resolve(
+        config.get("artifacts", {}).get("model_path", "models/model.pkl")
+    )
+    save_artifact(model, str(model_path))
 
     active = model_config.get("active", "decision_tree")
-    algo_model_path = model_config.get(active, {}).get(
-        "save_path", f"models/{active}.pkl")
-    save_artifact(model, algo_model_path)
+    algo_model_path = _resolve(
+        model_config.get(active, {}).get("save_path", f"models/{active}.pkl")
+    )
+    save_artifact(model, str(algo_model_path))
 
     # 5. Evaluate model and log metrics
     display_metrics = config.get("metrics", {}).get("display", [])

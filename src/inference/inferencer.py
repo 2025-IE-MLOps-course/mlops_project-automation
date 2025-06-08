@@ -25,6 +25,13 @@ from preprocess.preprocessing import get_output_feature_names
 
 logger = logging.getLogger(__name__)
 
+# Resolve project root to allow relative artifact paths
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+def _resolve(path: str | Path) -> Path:
+    p = Path(path)
+    return p if p.is_absolute() else PROJECT_ROOT / p
+
 
 # helper to load pickled artefacts
 def _load_pickle(path: str, label: str):
@@ -58,17 +65,20 @@ def run_inference(input_csv: str, config_yaml: str, output_csv: str) -> None:
     with open(config_yaml, "r", encoding="utf-8") as fh:
         config: Dict = yaml.safe_load(fh)
 
-    pp_path = config.get("artifacts", {}).get(
-        "preprocessing_pipeline", "models/preprocessing_pipeline.pkl"
+    pp_path = _resolve(
+        config.get("artifacts", {}).get(
+            "preprocessing_pipeline", "models/preprocessing_pipeline.pkl"
+        )
     )
-    model_path = config.get("artifacts", {}).get(
-        "model_path", "models/model.pkl")
+    model_path = _resolve(
+        config.get("artifacts", {}).get("model_path", "models/model.pkl")
+    )
 
     logger.info("Loading preprocessing pipeline: %s", pp_path)
-    pipeline = _load_pickle(pp_path, "preprocessing pipeline")
+    pipeline = _load_pickle(str(pp_path), "preprocessing pipeline")
 
     logger.info("Loading trained model: %s", model_path)
-    model = _load_pickle(model_path, "model")
+    model = _load_pickle(str(model_path), "model")
 
     # ── 2. Read raw data and basic validation ─────────────────────────────
     logger.info("Reading input CSV: %s", input_csv)

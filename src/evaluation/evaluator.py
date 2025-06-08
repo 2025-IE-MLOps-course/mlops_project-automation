@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import pickle
+from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
@@ -36,6 +37,13 @@ from sklearn.metrics import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _resolve(path: str | Path) -> Path:
+    p = Path(path)
+    return p if p.is_absolute() else PROJECT_ROOT / p
 
 
 # internal helpers
@@ -240,31 +248,26 @@ def generate_report(
             return {"validation": {}, "test": {}}
 
     artifacts = config.get("artifacts", {})
-    model_path = cast(
-        str,
-        model_path or artifacts.get("model_path", "models/model.pkl"),
+    model_path = _resolve(
+        model_path or artifacts.get("model_path", "models/model.pkl")
     )
-    processed_dir = cast(
-        str,
-        processed_dir or artifacts.get("processed_dir", "data/processed"),
+    processed_dir = _resolve(
+        processed_dir or artifacts.get("processed_dir", "data/processed")
     )
-    save_path = cast(
-        str,
-        save_path or artifacts.get("metrics_path", "models/metrics.json"),
+    save_path = _resolve(
+        save_path or artifacts.get("metrics_path", "models/metrics.json")
     )
     target: str = config["target"]
 
     # 1. Load trained model
-    if not os.path.isfile(model_path):
+    if not model_path.is_file():
         raise FileNotFoundError(f"Model artifact not found: {model_path}")
     with open(model_path, "rb") as fh:
         model = pickle.load(fh)
 
     # 2. Load and filter processed splits
-    valid_df = pd.read_csv(os.path.join(
-        processed_dir, "valid_processed.csv")).dropna(subset=[target])
-    test_df = pd.read_csv(os.path.join(
-        processed_dir, "test_processed.csv")).dropna(subset=[target])
+    valid_df = pd.read_csv(processed_dir / "valid_processed.csv").dropna(subset=[target])
+    test_df = pd.read_csv(processed_dir / "test_processed.csv").dropna(subset=[target])
 
     X_val, y_val = valid_df.drop(
         columns=[target]).values, valid_df[target].values
@@ -285,7 +288,7 @@ def generate_report(
         )
 
     # 4. Persist report as JSON
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "w", encoding="utf-8") as fh:
         json.dump({"validation": res_val, "test": res_test}, fh, indent=2)
 
