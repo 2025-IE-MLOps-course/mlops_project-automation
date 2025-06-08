@@ -32,6 +32,7 @@ model:
     save_path: models/decision_tree.pkl
     params:
       max_depth: 4
+      min_samples_split: 2
       random_state: 42
   logistic_regression:
     save_path: models/logistic_regression.pkl

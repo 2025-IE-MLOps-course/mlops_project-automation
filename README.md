@@ -137,6 +137,8 @@ dvc pull     # download project data
 python main.py main.steps=all
 # or using MLflow
 mlflow run . -P steps=all
+# override model hyperparameters (Hydra syntax)
+python main.py main.steps=model main.hydra_options='model.decision_tree.params.max_depth=6 model.decision_tree.params.min_samples_split=3'
 ```
 
 **Run inference from any server (after cloning repo and installing dependencies):**

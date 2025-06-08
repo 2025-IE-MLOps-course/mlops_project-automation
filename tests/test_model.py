@@ -53,7 +53,7 @@ def minimal_config(tmp_path):
         },
         "model": {
             "active": "decision_tree",
-            "decision_tree": {"params": {"max_depth": 2}}
+            "decision_tree": {"params": {"max_depth": 2, "min_samples_split": 2}}
         },
         "artifacts": {
             "splits_dir": str(tmp_path / "splits"),
@@ -93,8 +93,10 @@ def test_train_model_unsupported_type(Xy):
 def test_train_model_with_params(Xy):
     """train_model passes params to sklearn model."""
     X, y = Xy
-    model = train_model(X, y, "decision_tree", {"max_depth": 1})
+    params = {"max_depth": 1, "min_samples_split": 3}
+    model = train_model(X, y, "decision_tree", params)
     assert hasattr(model, "max_depth") and model.max_depth == 1
+    assert hasattr(model, "min_samples_split") and model.min_samples_split == 3
 
 
 # --- Tests for artifact saving/loading ---
