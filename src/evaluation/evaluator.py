@@ -48,6 +48,8 @@ def evaluate_classification(
     *,
     metrics: Optional[list[str]] = None,
     split: str = "",
+    save_path: Optional[str] = None,
+    log: bool = False,
 ) -> dict[str, float | dict]:
     """Compute metrics for one data split (drops NaN targets)."""
     mask = ~pd.isna(y)
@@ -64,10 +66,12 @@ def evaluate_classification(
         "recall": "Recall (Sensitivity)",
         "sensitivity": "Recall (Sensitivity)",
         "f1": "F1 Score",
+        "f1 score": "F1 Score",
         "roc auc": "ROC AUC",
         "specificity": "Specificity",
         "npv": "Negative Predictive Value (NPV)",
         "negative predictive value": "Negative Predictive Value (NPV)",
+        "negative predictive value (npv)": "Negative Predictive Value (NPV)",
         "confusion matrix": "Confusion Matrix",
     }
     if metrics is None:
@@ -103,6 +107,17 @@ def evaluate_classification(
                 out[m] = float("nan")
         elif m == "Confusion Matrix":
             out[m] = {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)}
+
+    if save_path:
+        sp = Path(save_path)
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        with open(sp, "w", encoding="utf-8") as fh:
+            json.dump(out, fh, indent=2)
+
+    if log:
+        msg_split = f" ({split})" if split else ""
+        logger.info("Evaluation metrics%s: %s", msg_split, json.dumps(out))
+
     return out
 
 
