@@ -46,6 +46,11 @@ This repository provides a modular, **production-quality** MLOps pipeline for bi
 ├── tests/                       # Unit and integration tests (pytest)
 ```
 
+Artifact paths in `config.yaml` such as `data/splits`, `data/processed`, and
+`models/` are resolved relative to this project root. Generated metrics,
+preprocessing pipelines, and trained models will be saved under these
+directories.
+
 ---
 
 ## 🔬 Problem Description
