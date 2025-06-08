@@ -1,19 +1,23 @@
-"""inference/run.py
+"""
+inference/run.py
 
 MLflow-compatible batch inference step with Hydra config and W&B logging.
 Uses the trained model and preprocessing pipeline to generate predictions
-for new data.
+for new data. Logs prediction artifact, input hash/schema, duration, 
+prediction probability stats, and sample table to W&B.
 """
-
-from __future__ import annotations
 
 import sys
 import logging
+import hashlib
+import json
+import time
 from datetime import datetime
 from pathlib import Path
 
 import hydra
 import wandb
+import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
 
@@ -33,6 +37,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("inference")
 
+def df_hash(df: pd.DataFrame) -> str:
+    return hashlib.sha256(pd.util.hash_pandas_object(df, index=True).values).hexdigest()
 
 @hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
@@ -58,30 +64,48 @@ def main(cfg: DictConfig) -> None:
         input_path = PROJECT_ROOT / cfg.inference.input_csv
         output_path = PROJECT_ROOT / cfg.inference.output_csv
 
+        # Log input data hash and schema
+        if input_path.is_file():
+            in_df = pd.read_csv(input_path)
+            wandb.summary["input_data_hash"] = df_hash(in_df)
+            input_schema = {col: str(dtype) for col, dtype in in_df.dtypes.items()}
+            wandb.summary["input_data_schema"] = input_schema
+
+            schema_path = PROJECT_ROOT / "artifacts" / f"infer_input_schema_{run.id[:8]}.json"
+            schema_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(schema_path, "w") as f:
+                json.dump(input_schema, f, indent=2)
+            art = wandb.Artifact(f"infer_input_schema_{run.id[:8]}", type="schema")
+            art.add_file(str(schema_path))
+            wandb.log_artifact(art)
+
+        # Track inference duration
+        t0 = time.time()
         run_inference(str(input_path), str(config_path), str(output_path))
+        duration = time.time() - t0
+        wandb.summary["inference_duration_seconds"] = duration
 
-        if cfg.data_load.get("log_artifacts", True) and output_path.is_file():
-            artifact = wandb.Artifact(f"predictions_{run.id[:8]}", type="predictions")
-            artifact.add_file(str(output_path))
-            wandb.log_artifact(artifact)
-            logger.info("Logged predictions artifact to WandB")
-
-        if cfg.data_load.get("log_sample_artifacts", True) and output_path.is_file():
-            import pandas as pd
-
-            sample_tbl = wandb.Table(dataframe=pd.read_csv(output_path).head(50))
-            wandb.log({"prediction_sample": sample_tbl})
-
+        # Log predictions as artifact and sample table
         if output_path.is_file():
-            import pandas as pd
-
             out_df = pd.read_csv(output_path)
-            wandb.summary.update(
-                {
-                    "n_predictions": len(out_df),
-                    "prediction_columns": list(out_df.columns),
-                }
-            )
+
+            # Log the entire table (since it's small)
+            wandb.log({"prediction_table": wandb.Table(dataframe=out_df)})
+
+            wandb.summary["n_predictions"] = len(out_df)
+            wandb.summary["prediction_columns"] = list(out_df.columns)
+
+            if "prediction_proba" in out_df.columns:
+                wandb.summary["prediction_proba_mean"] = float(out_df["prediction_proba"].mean())
+                wandb.summary["prediction_proba_min"] = float(out_df["prediction_proba"].min())
+                wandb.summary["prediction_proba_max"] = float(out_df["prediction_proba"].max())
+
+            # Log predictions as artifact
+            if cfg.data_load.get("log_artifacts", True):
+                artifact = wandb.Artifact(f"predictions_{run.id[:8]}", type="predictions")
+                artifact.add_file(str(output_path))
+                wandb.log_artifact(artifact)
+                logger.info("Logged predictions artifact to WandB")
 
     except Exception as e:
         logger.exception("Failed during inference step")
@@ -92,7 +116,6 @@ def main(cfg: DictConfig) -> None:
         if wandb.run is not None:
             wandb.finish()
             logger.info("WandB run finished")
-
 
 if __name__ == "__main__":
     main()
