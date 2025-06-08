@@ -19,7 +19,6 @@ from model.model import (
 from evaluation.evaluator import generate_report
 
 import sys
-print("PYTHONPATH:", sys.path)
 
 
 # --- Fixtures for toy data and config ---
