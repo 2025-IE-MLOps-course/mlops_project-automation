@@ -172,7 +172,6 @@ def validate_data(
     """
     dv_cfg = config.get("data_validation", {})
     if not dv_cfg.get("enabled", True):
-        dv_cfg["enabled"] = True
         logger.info("Data validation is disabled in config.")
         return
 
