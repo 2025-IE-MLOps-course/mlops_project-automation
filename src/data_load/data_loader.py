@@ -79,13 +79,14 @@ def load_data(
 
 def get_data(
     config_path: str = "config.yaml",
-    env_path: str = ".env",
+    env_path: Optional[str] = None,
     data_stage: str = "raw"
 ) -> pd.DataFrame:
     """
-    Main entry: Loads env, config, resolves path, loads data for the requested stage.
+    Main entry: Optionally loads env, then config, resolves path and loads data for the requested stage.
     """
-    load_env(env_path)
+    if env_path:
+        load_env(env_path)
     config = load_config(config_path)
     data_cfg = config.get("data_source", {})
     if data_stage == "raw":
