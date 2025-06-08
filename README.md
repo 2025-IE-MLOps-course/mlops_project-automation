@@ -122,6 +122,7 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 ```bash
 conda env create -f environment.yml
 conda activate mlops-opioid
+./setup.sh  # for Codex sessions
 ```
 
 **Run end-to-end pipeline:**
