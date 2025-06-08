@@ -255,6 +255,8 @@ def generate_report(
     target: str = config["target"]
 
     # 1. Load trained model
+    if not os.path.isfile(model_path):
+        raise FileNotFoundError(f"Model artifact not found: {model_path}")
     with open(model_path, "rb") as fh:
         model = pickle.load(fh)
 
