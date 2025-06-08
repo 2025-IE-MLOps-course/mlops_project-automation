@@ -8,6 +8,7 @@ non-NaN samples and the probability vector is at least length 2.
 """
 
 import sys, logging, hashlib, json
+import numpy as np
 from datetime import datetime
 from pathlib import Path
 
@@ -100,9 +101,12 @@ def main(cfg: DictConfig) -> None:
             # ROC & PR curves
             if y_proba is not None and _len_safe(y_proba) == _len_safe(y_true):
                 if _len_safe(y_proba) > 1:  # need >1 point
+                    y_proba_arr = np.asarray(y_proba)
+                    if y_proba_arr.ndim == 1:
+                        y_proba_arr = np.column_stack([1 - y_proba_arr, y_proba_arr])
                     wandb.log({
-                        "roc_curve": wandb.plot.roc_curve(y_true, y_proba),
-                        "pr_curve":  wandb.plot.pr_curve(y_true, y_proba),
+                        "roc_curve": wandb.plot.roc_curve(y_true, y_proba_arr),
+                        "pr_curve":  wandb.plot.pr_curve(y_true, y_proba_arr),
                     })
 
         # ─── Metrics JSON artifact ─────────────────────────────
