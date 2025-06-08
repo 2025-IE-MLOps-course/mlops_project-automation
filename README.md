@@ -121,13 +121,17 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 **Environment setup:**
 ```bash
 conda env create -f environment.yml
-conda activate mlops-opioid
-./setup.sh  # for Codex sessions
+conda activate mlops_project
+./setup.sh  # install all dependencies for testing
+dvc pull     # download project data
 ```
 
 **Run end-to-end pipeline:**
 ```bash
-python -m src.main --config config.yaml --stage all
+# run via python
+python main.py main.steps=all
+# or using MLflow
+mlflow run . -P steps=all
 ```
 
 **Run inference from any server (after cloning repo and installing dependencies):**
