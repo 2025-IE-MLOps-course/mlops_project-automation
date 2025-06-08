@@ -13,6 +13,7 @@ import os
 import pytest
 import pandas as pd
 import json
+import copy
 from data_validation import data_validator
 
 # Basic schema definition for test coverage
@@ -84,7 +85,7 @@ def df_out_of_range():
 
 def test_validate_data_happy_path(valid_df, tmp_path):
     """Test successful validation (happy path, all data correct)."""
-    config = dict(BASIC_CONFIG)
+    config = copy.deepcopy(BASIC_CONFIG)
     report_path = tmp_path / "validation_report.json"
     config["data_validation"]["report_path"] = str(report_path)
     data_validator.validate_data(valid_df, config)
@@ -99,7 +100,7 @@ def test_validate_data_happy_path(valid_df, tmp_path):
 
 def test_validate_data_missing_required_column(df_missing_col, tmp_path):
     """Test missing required column triggers error and is reported."""
-    config = dict(BASIC_CONFIG)
+    config = copy.deepcopy(BASIC_CONFIG)
     config["data_validation"]["report_path"] = str(
         tmp_path / "validation_report.json")
     with pytest.raises(ValueError) as e:
@@ -115,7 +116,7 @@ def test_validate_data_missing_required_column(df_missing_col, tmp_path):
 
 def test_validate_data_invalid_dtype(df_invalid_type, tmp_path):
     """Test dtype mismatch triggers error and stops further checks."""
-    config = dict(BASIC_CONFIG)
+    config = copy.deepcopy(BASIC_CONFIG)
     config["data_validation"]["report_path"] = str(
         tmp_path / "validation_report.json")
     with pytest.raises(ValueError) as e:
@@ -130,7 +131,7 @@ def test_validate_data_invalid_dtype(df_invalid_type, tmp_path):
 
 def test_validate_data_out_of_range(df_out_of_range, tmp_path):
     """Test out-of-range and not-in-set values trigger errors."""
-    config = dict(BASIC_CONFIG)
+    config = copy.deepcopy(BASIC_CONFIG)
     config["data_validation"]["report_path"] = str(
         tmp_path / "validation_report.json")
     with pytest.raises(ValueError) as e:
@@ -146,7 +147,7 @@ def test_validate_data_out_of_range(df_out_of_range, tmp_path):
 
 def test_validate_data_disabled(valid_df, tmp_path):
     """Test validation is skipped when disabled in config."""
-    config = dict(BASIC_CONFIG)
+    config = copy.deepcopy(BASIC_CONFIG)
     config["data_validation"]["enabled"] = False
     config["data_validation"]["report_path"] = str(
         tmp_path / "validation_report.json")
@@ -158,7 +159,7 @@ def test_validate_data_disabled(valid_df, tmp_path):
 
 def test_validate_data_action_on_error_warn(df_out_of_range, tmp_path, caplog):
     """Test action_on_error=warn records errors, but does not raise."""
-    config = dict(BASIC_CONFIG)
+    config = copy.deepcopy(BASIC_CONFIG)
     config["data_validation"]["action_on_error"] = "warn"
     config["data_validation"]["report_path"] = str(
         tmp_path / "validation_report.json")
@@ -186,7 +187,7 @@ def test_validate_data_optional_column(valid_df, tmp_path):
         {"name": "ID", "dtype": "int", "required": True, "min": 1},
         {"name": "foo", "dtype": "int", "required": False}
     ]
-    config = dict(BASIC_CONFIG)
+    config = copy.deepcopy(BASIC_CONFIG)
     config["data_validation"]["schema"]["columns"] = schema
     config["data_validation"]["report_path"] = str(
         tmp_path / "validation_report.json")
