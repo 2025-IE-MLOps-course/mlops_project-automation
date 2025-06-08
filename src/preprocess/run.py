@@ -4,27 +4,30 @@ preprocess/run.py
 MLflow-compatible preprocessing step with Hydra config and W&B logging.
 Builds the preprocessing pipeline defined in ``config.yaml`` and saves it
 as a pickle artifact for downstream stages.
+Logs input data hash, schema, sample, and feature stats for reproducibility and best MLOps practices.
 """
 
 import sys
 import logging
 import pickle
+import hashlib
+import json
 from datetime import datetime
 from pathlib import Path
 
 import hydra
 import wandb
+import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
 
-# Ensure project modules are importable when executed via MLflow
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from preprocess.preprocessing import build_preprocessing_pipeline
 from data_load.data_loader import get_data
+from preprocess.preprocessing import build_preprocessing_pipeline
 
 load_dotenv()
 
@@ -34,6 +37,11 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger("preprocess")
+
+
+def compute_df_hash(df: pd.DataFrame) -> str:
+    """Compute a hash for the input DataFrame, including index."""
+    return hashlib.sha256(pd.util.hash_pandas_object(df, index=True).values).hexdigest()
 
 
 @hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
@@ -61,6 +69,33 @@ def main(cfg: DictConfig) -> None:
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
 
+        # Log input data hash for traceability
+        df_hash = compute_df_hash(df)
+        wandb.summary["input_data_hash"] = df_hash
+
+        # Log schema as artifact and summary
+        schema = {col: str(dtype) for col, dtype in df.dtypes.items()}
+        schema_path = PROJECT_ROOT / "artifacts" / f"schema_{run.id[:8]}.json"
+        schema_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(schema_path, "w") as f:
+            json.dump(schema, f, indent=2)
+        wandb.summary["pipeline_schema"] = schema
+        schema_art = wandb.Artifact(f"schema_{run.id[:8]}", type="schema")
+        schema_art.add_file(str(schema_path))
+        wandb.log_artifact(schema_art)
+
+        # Log sample input (first 50 rows)
+        if cfg.data_load.get("log_sample_artifacts", True):
+            sample_tbl = wandb.Table(dataframe=df.head(50))
+            wandb.log({"input_sample_rows": sample_tbl})
+
+        # Log data stats (describe table)
+        if cfg.data_load.get("log_summary_stats", True):
+            stats_tbl = wandb.Table(dataframe=df.describe(
+                include="all").T.reset_index())
+            wandb.log({"input_stats": stats_tbl})
+
+        # Build and fit preprocessing pipeline
         pipeline = build_preprocessing_pipeline(cfg_dict)
         pipeline.fit(df)
 
@@ -72,6 +107,7 @@ def main(cfg: DictConfig) -> None:
             pickle.dump(pipeline, f)
         logger.info("Saved preprocessing pipeline to %s", pp_path)
 
+        # Log pipeline artifact
         if cfg.data_load.get("log_artifacts", True):
             artifact = wandb.Artifact(
                 f"preprocessing_pipeline_{run.id[:8]}", type="pipeline"
