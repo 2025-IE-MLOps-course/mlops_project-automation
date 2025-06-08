@@ -81,9 +81,9 @@ def main(cfg: DictConfig) -> None:
         run_model_pipeline(df, cfg_dict)  # your function saves model & metrics
 
         # ─────────────────────────────── metrics ─────────────────────────────
-        report = generate_report(cfg_dict)
+        report_dict, *_ = generate_report(cfg_dict)
         flat = {}
-        for split, metrics in report.items():
+        for split, metrics in report_dict.items():
             for k, v in metrics.items():
                 if isinstance(v, dict):
                     for sk, sv in v.items():
