@@ -9,4 +9,4 @@ entry_points:
         default: ""
         description: Extra Hydra overrides (optional)
     command: >
-      python run.py
+      python run.py ${hydra_options}

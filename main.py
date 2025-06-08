@@ -18,7 +18,7 @@ PIPELINE_STEPS = [
 ]
 
 # Only these steps accept Hydra overrides via MLflow parameters
-STEPS_WITH_OVERRIDES = {}
+STEPS_WITH_OVERRIDES = {"model"}
 
 
 @hydra.main(config_name="config", config_path=".", version_base=None)
