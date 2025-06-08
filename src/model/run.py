@@ -1,18 +1,15 @@
 """
 model/run.py
 
-MLflow-compatible model training step with Hydra config and W&B logging.
-Trains the model using the config-defined preprocessing and model
-settings, saves artifacts, and logs metrics to Weights & Biases.
+MLflow-compatible model-training step with Hydra config and W&B logging.
+Trains the model, logs metrics, schema, hashes and all artifacts needed
+for reproducibility and auditability.
 """
 
-import sys
-import logging
+import sys, logging, hashlib, json
 from datetime import datetime
 from pathlib import Path
-
-import hydra
-import wandb
+import hydra, wandb, pandas as pd
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
 
@@ -26,7 +23,6 @@ from model.model import run_model_pipeline
 from evaluation.evaluator import generate_report
 
 load_dotenv()
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -35,82 +31,92 @@ logging.basicConfig(
 logger = logging.getLogger("model")
 
 
+def df_hash(df: pd.DataFrame) -> str:
+    """Deterministic hash of a DataFrame (values + index)."""
+    return hashlib.sha256(
+        pd.util.hash_pandas_object(df, index=True).values
+    ).hexdigest()
+
+
 @hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
-    config_path = PROJECT_ROOT / "config.yaml"
     cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+    run_name = f"model_{datetime.now():%Y%m%d_%H%M%S}"
 
-    dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_name = f"model_{dt_str}"
+    run = wandb.init(
+        project=cfg.main.WANDB_PROJECT,
+        entity=cfg.main.WANDB_ENTITY,
+        job_type="model",
+        name=run_name,
+        config=cfg_dict,
+        tags=["model"],
+    )
+    logger.info("Started WandB run: %s", run_name)
 
-    run = None
     try:
-        run = wandb.init(
-            project=cfg.main.WANDB_PROJECT,
-            entity=cfg.main.WANDB_ENTITY,
-            job_type="model",
-            name=run_name,
-            config=cfg_dict,
-            tags=["model"],
-        )
-        logger.info("Started WandB run: %s", run_name)
-
-        df = get_data(config_path=str(config_path), data_stage="raw")
+        # ─────────────────────────────── data ────────────────────────────────
+        df = get_data(config_path=str(PROJECT_ROOT / "config.yaml"), data_stage="raw")
         if df.empty:
-            logger.warning("Loaded dataframe is empty.")
+            logger.warning("Loaded dataframe is empty")
 
-        # Train model and save artifacts
-        run_model_pipeline(df, cfg_dict)
+        wandb.summary["train_data_hash"] = df_hash(df)
+        schema = {c: str(t) for c, t in df.dtypes.items()}
+        wandb.summary["model_train_schema"] = schema
 
-        # Generate metrics report (validation/test)
+        schema_path = PROJECT_ROOT / "artifacts" / f"model_schema_{run.id[:8]}.json"
+        schema_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(schema_path, "w") as f:
+            json.dump(schema, f, indent=2)
+
+        schema_art = wandb.Artifact(
+            f"model_schema_{run.id[:8]}", type="schema"
+        )
+        schema_art.add_file(str(schema_path))
+        wandb.log_artifact(schema_art)
+
+        if cfg.data_load.get("log_sample_artifacts", True):
+            wandb.log({"train_sample_rows": wandb.Table(dataframe=df.head(50))})
+
+        # ────────────────────────────── training ─────────────────────────────
+        run_model_pipeline(df, cfg_dict)  # your function saves model & metrics
+
+        # ─────────────────────────────── metrics ─────────────────────────────
         report = generate_report(cfg_dict)
-
-        # Flatten metrics for summary logging
-        metrics_flat: dict[str, float] = {}
+        flat = {}
         for split, metrics in report.items():
-            for key, val in metrics.items():
-                if isinstance(val, dict):
-                    for sub_k, sub_v in val.items():
-                        metrics_flat[f"{split}_{key}_{sub_k}"] = sub_v
+            for k, v in metrics.items():
+                if isinstance(v, dict):
+                    for sk, sv in v.items():
+                        flat[f"{split}_{k}_{sk}"] = sv
                 else:
-                    metrics_flat[f"{split}_{key}"] = val
-        if metrics_flat:
-            wandb.summary.update(metrics_flat)
+                    flat[f"{split}_{k}"] = v
+        wandb.summary.update(flat)
 
-        # Log artifacts if configured
+        # ────────────────────────────── artifacts ────────────────────────────
         if cfg.data_load.get("log_artifacts", True):
-            model_path = PROJECT_ROOT / cfg.artifacts.get("model_path", "models/model.pkl")
-            if model_path.is_file():
-                art = wandb.Artifact(f"model_{run.id[:8]}", type="model")
-                art.add_file(str(model_path))
-                wandb.log_artifact(art)
-                logger.info("Logged model artifact to WandB")
-
-            pp_path = PROJECT_ROOT / cfg.artifacts.get(
-                "preprocessing_pipeline", "models/preprocessing_pipeline.pkl"
-            )
-            if pp_path.is_file():
-                art = wandb.Artifact(f"preprocessing_pipeline_{run.id[:8]}", type="pipeline")
-                art.add_file(str(pp_path))
-                wandb.log_artifact(art)
-                logger.info("Logged preprocessing pipeline artifact to WandB")
-
-            metrics_path = PROJECT_ROOT / cfg.artifacts.get("metrics_path", "models/metrics.json")
-            if metrics_path.is_file():
-                art = wandb.Artifact(f"metrics_{run.id[:8]}", type="metrics")
-                art.add_file(str(metrics_path))
-                wandb.log_artifact(art)
-                logger.info("Logged metrics artifact to WandB")
+            art_specs = [
+                ("model_path", "model.pkl", "model"),
+                ("preprocessing_pipeline", "preprocessing_pipeline.pkl", "pipeline"),
+                ("metrics_path", "metrics.json", "metrics"),
+            ]
+            for cfg_key, default_name, art_type in art_specs:
+                p = PROJECT_ROOT / cfg.artifacts.get("models", "models") / default_name
+                # allow override in config
+                if cfg_key in cfg.artifacts:
+                    p = PROJECT_ROOT / cfg.artifacts[cfg_key]
+                if p.is_file():
+                    art = wandb.Artifact(f"{art_type}_{run.id[:8]}", type=art_type)
+                    art.add_file(str(p))
+                    wandb.log_artifact(art)
+                    logger.info("Logged %s artifact to W&B", art_type)
 
     except Exception as e:
-        logger.exception("Failed during model step")
-        if run is not None:
-            run.alert(title="Model Step Error", text=str(e))
+        logger.exception("Model step failed")
+        run.alert(title="Model Step Error", text=str(e))
         sys.exit(1)
     finally:
-        if wandb.run is not None:
-            wandb.finish()
-            logger.info("WandB run finished")
+        wandb.finish()
+        logger.info("WandB run finished")
 
 
 if __name__ == "__main__":
