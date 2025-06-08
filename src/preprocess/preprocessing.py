@@ -273,7 +273,7 @@ if __name__ == "__main__":
     """
     Quick CLI helper so students can run:
 
-        python -m src.preprocess.preprocessing data/raw/opiod_raw_data.csv config.yaml
+        python -m src.preprocess.preprocessing data/raw/opioid_raw_data.csv config.yaml
 
     and inspect the first few pre-processed rows.
     """
