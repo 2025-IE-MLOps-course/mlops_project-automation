@@ -7,8 +7,8 @@ main:
   hydra_options: ""     # Add this line for CLI/MLflow runtime overrides
 
 data_source:
-  raw_path: "./data/raw/opiod_raw_data.csv" # Relative to project root
-  processed_path: "./data/processed/opiod_processed_data.csv"
+  raw_path: "./data/raw/opioid_raw_data.csv" # Relative to project root
+  processed_path: "./data/processed/opioid_processed_data.csv"
   type: "csv"
   sheet_name: "Sheet1"       # Only used if type == 'excel'
   delimiter: ","             # Only used if type == 'csv'
@@ -147,6 +147,7 @@ artifacts:
   preprocessing_pipeline: models/preprocessing_pipeline.pkl
   splits_dir: data/splits
   processed_dir: data/processed
+  model_path: models/model.pkl
 
 data_validation:
   enabled: true
