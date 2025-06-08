@@ -147,6 +147,7 @@ artifacts:
   preprocessing_pipeline: models/preprocessing_pipeline.pkl
   splits_dir: data/splits
   processed_dir: data/processed
+  model_path: models/model.pkl
 
 data_validation:
   enabled: true
