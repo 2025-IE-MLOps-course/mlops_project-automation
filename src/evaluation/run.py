@@ -54,7 +54,13 @@ def main(cfg: DictConfig) -> None:
         )
         logger.info("Started WandB run: %s", run_name)
 
-        report = generate_report(cfg_dict)
+        try:
+            report = generate_report(cfg_dict)
+        except FileNotFoundError as e:
+            logger.error("%s", e)
+            if run is not None:
+                run.alert(title="Evaluation Step Error", text=str(e))
+            sys.exit(1)
 
         metrics_flat: dict[str, float] = {}
         for split, metrics in report.items():
