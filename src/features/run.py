@@ -49,7 +49,7 @@ def main(cfg: DictConfig) -> None:
             entity=cfg.main.WANDB_ENTITY,
             job_type="feature_eng",
             name=run_name,
-            config=dict(cfg),
+            config=cfg_dict,
             tags=["feature_eng"],
         )
         logger.info("Started WandB run: %s", run_name)
@@ -79,7 +79,9 @@ def main(cfg: DictConfig) -> None:
         logger.info("Saved engineered data to %s", processed_path)
 
         if cfg.data_load.get("log_artifacts", True):
-            artifact = wandb.Artifact("processed_data", type="dataset")
+            artifact = wandb.Artifact(
+                f"processed_data_{run.id[:8]}", type="dataset"
+            )
             artifact.add_file(str(processed_path))
             wandb.log_artifact(artifact)
             logger.info("Logged processed data artifact to WandB")
