@@ -6,6 +6,7 @@ dependencies:
   - python=3.10
   - pandas
   - scikit-learn
+  - matplotlib
   - hydra-core
   - omegaconf
   - python-dotenv

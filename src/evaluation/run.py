@@ -1,21 +1,17 @@
 """
 evaluation/run.py
 
-MLflow-compatible evaluation step with Hydra config and W&B logging.
-Loads the trained model and processed validation/test data, computes metrics,
-logs them, and saves schema, data hash, and plots for experiment tracking.
+MLflow-compatible evaluation step with Hydra & W&B logging.
+Logs scalar metrics and artifacts for every run, and only logs
+confusion-matrix / ROC / PR plots when the test split has ≥2
+non-NaN samples and the probability vector is at least length 2.
 """
 
-import sys
-import logging
-import hashlib
-import json
+import sys, logging, hashlib, json
 from datetime import datetime
 from pathlib import Path
 
-import hydra
-import wandb
-import pandas as pd
+import hydra, wandb, pandas as pd
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
 
@@ -24,10 +20,10 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from evaluation.evaluator import generate_report, load_eval_data, plot_confusion_matrix, plot_roc_curve
+from evaluation.evaluator import generate_report
+from data_load.data_loader import get_data
 
 load_dotenv()
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -35,89 +31,91 @@ logging.basicConfig(
 )
 logger = logging.getLogger("evaluation")
 
-def compute_df_hash(df: pd.DataFrame) -> str:
-    """Compute a hash for the DataFrame, including index."""
+def df_hash(df: pd.DataFrame) -> str:
     return hashlib.sha256(pd.util.hash_pandas_object(df, index=True).values).hexdigest()
+
+def _len_safe(x):
+    try:
+        return len(x)
+    except Exception:
+        return 0
 
 @hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
-    """Entry point for the evaluation MLflow step."""
-
-    config_path = PROJECT_ROOT / "config.yaml"
     cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+    run_name = f"evaluation_{datetime.now():%Y%m%d_%H%M%S}"
 
-    dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_name = f"evaluation_{dt_str}"
+    run = wandb.init(
+        project=cfg.main.WANDB_PROJECT,
+        entity=cfg.main.WANDB_ENTITY,
+        job_type="evaluation",
+        name=run_name,
+        config=cfg_dict,
+        tags=["evaluation"],
+    )
+    logger.info("Started WandB run: %s", run_name)
 
-    run = None
     try:
-        run = wandb.init(
-            project=cfg.main.WANDB_PROJECT,
-            entity=cfg.main.WANDB_ENTITY,
-            job_type="evaluation",
-            name=run_name,
-            config=cfg_dict,
-            tags=["evaluation"],
-        )
-        logger.info("Started WandB run: %s", run_name)
-
-        # Load evaluation data for schema/hash logging (define load_eval_data as needed)
-        df = load_eval_data(cfg_dict)
-        if df is not None and not df.empty:
-            df_hash = compute_df_hash(df)
-            wandb.summary["eval_data_hash"] = df_hash
-            eval_schema = {col: str(dtype) for col, dtype in df.dtypes.items()}
-            wandb.summary["eval_data_schema"] = eval_schema
+        # ─── Dataset traceability ───────────────────────────────
+        df = get_data(config_path=str(PROJECT_ROOT / "config.yaml"), data_stage="processed")
+        if not df.empty:
+            wandb.summary["eval_data_hash"] = df_hash(df)
+            schema = {c: str(t) for c, t in df.dtypes.items()}
+            wandb.summary["eval_data_schema"] = schema
             schema_path = PROJECT_ROOT / "artifacts" / f"eval_schema_{run.id[:8]}.json"
             schema_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(schema_path, "w") as f:
-                json.dump(eval_schema, f, indent=2)
-            schema_art = wandb.Artifact(f"eval_schema_{run.id[:8]}", type="schema")
-            schema_art.add_file(str(schema_path))
-            wandb.log_artifact(schema_art)
-            # Optionally log a sample of evaluation data
+            json.dump(schema, open(schema_path, "w"), indent=2)
+            wandb.log_artifact(wandb.Artifact(f"eval_schema_{run.id[:8]}", type="schema")
+                               .add_file(str(schema_path)))
             if cfg.data_load.get("log_sample_artifacts", True):
-                sample_tbl = wandb.Table(dataframe=df.head(50))
-                wandb.log({"eval_sample_rows": sample_tbl})
+                wandb.log({"eval_sample_rows": wandb.Table(dataframe=df.head(50))})
 
-        # Generate report and log metrics
-        report, y_true, y_pred, y_proba = generate_report(cfg_dict)  # update to return these as needed
+        # ─── Metrics and arrays ─────────────────────────────────
+        report, y_true, y_pred, y_proba = generate_report(cfg_dict)
 
-        metrics_flat: dict[str, float] = {}
+        flat = {}
         for split, metrics in report.items():
-            for key, val in metrics.items():
-                if isinstance(val, dict):
-                    for sub_k, sub_v in val.items():
-                        metrics_flat[f"{split}_{key}_{sub_k}"] = sub_v
+            for k, v in metrics.items():
+                if isinstance(v, dict):
+                    for sk, sv in v.items():
+                        flat[f"{split}_{k}_{sk}"] = sv
                 else:
-                    metrics_flat[f"{split}_{key}"] = val
-        if metrics_flat:
-            wandb.summary.update(metrics_flat)
+                    flat[f"{split}_{k}"] = v
+        wandb.summary.update(flat)
 
-        # Log confusion matrix and ROC if classification
-        if y_true is not None and y_pred is not None:
-            cm_fig = plot_confusion_matrix(y_true, y_pred)
-            wandb.log({"confusion_matrix": wandb.Image(cm_fig)})
-        if y_true is not None and y_proba is not None:
-            roc_fig = plot_roc_curve(y_true, y_proba)
-            wandb.log({"roc_curve": wandb.Image(roc_fig)})
+        # ─── Plot only if we have ≥2 samples after NaN filter ───
+        if y_true is not None and _len_safe(y_true) > 1:
+            # Confusion matrix
+            if y_pred is not None and _len_safe(y_pred) == _len_safe(y_true):
+                class_names = getattr(cfg, "dataset", {}).get("class_names", None)
+                cm_panel = wandb.plot.confusion_matrix(
+                    y_true=y_true, preds=y_pred, class_names=class_names
+                )
+                wandb.log({"confusion_matrix": cm_panel})
 
+            # ROC & PR curves
+            if y_proba is not None and _len_safe(y_proba) == _len_safe(y_true):
+                if _len_safe(y_proba) > 1:  # need >1 point
+                    wandb.log({
+                        "roc_curve": wandb.plot.roc_curve(y_true, y_proba),
+                        "pr_curve":  wandb.plot.pr_curve(y_true, y_proba),
+                    })
+
+        # ─── Metrics JSON artifact ─────────────────────────────
         if cfg.data_load.get("log_artifacts", True):
-            metrics_path = PROJECT_ROOT / cfg.artifacts.get("metrics_path", "models/metrics.json")
-            if metrics_path.is_file():
-                art = wandb.Artifact(f"metrics_{run.id[:8]}", type="metrics")
-                art.add_file(str(metrics_path))
-                wandb.log_artifact(art)
-                logger.info("Logged metrics artifact to WandB")
+            m_path = PROJECT_ROOT / cfg.artifacts.get("metrics_path", "models/metrics.json")
+            if m_path.is_file():
+                wandb.log_artifact(wandb.Artifact(f"metrics_{run.id[:8]}", type="metrics")
+                                   .add_file(str(m_path)))
+
     except Exception as e:
-        logger.exception("Failed during evaluation step")
-        if run is not None:
+        logger.exception("Evaluation step failed")
+        if wandb.run is not None:
             run.alert(title="Evaluation Step Error", text=str(e))
         sys.exit(1)
     finally:
-        if wandb.run is not None:
-            wandb.finish()
-            logger.info("WandB run finished")
+        wandb.finish()
+        logger.info("WandB run finished")
 
 if __name__ == "__main__":
     main()
