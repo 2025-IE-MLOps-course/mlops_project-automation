@@ -77,9 +77,9 @@ def main(cfg: DictConfig) -> None:
             schema_path.parent.mkdir(parents=True, exist_ok=True)
             with open(schema_path, "w") as f:
                 json.dump(input_schema, f, indent=2)
-            art = wandb.Artifact(f"infer_input_schema_{run.id[:8]}", type="schema")
+            art = wandb.Artifact("inference_input_schema", type="schema")
             art.add_file(str(schema_path))
-            wandb.log_artifact(art)
+            run.log_artifact(art, aliases=["latest"])
 
         # Download model and preprocessing artifacts
         model_art = run.use_artifact("model:latest")
@@ -121,9 +121,9 @@ def main(cfg: DictConfig) -> None:
 
             # Log predictions as artifact
             if cfg.data_load.get("log_artifacts", True):
-                artifact = wandb.Artifact(f"predictions_{run.id[:8]}", type="predictions")
+                artifact = wandb.Artifact("predictions", type="predictions")
                 artifact.add_file(str(output_path))
-                wandb.log_artifact(artifact)
+                run.log_artifact(artifact, aliases=["latest"])
                 logger.info("Logged predictions artifact to WandB")
 
     except Exception as e:

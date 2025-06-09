@@ -73,7 +73,7 @@ def main(cfg: DictConfig) -> None:
         if val_report_full_path.is_file():
             artifact = wandb.Artifact("validation_report", type="report")
             artifact.add_file(str(val_report_full_path))
-            wandb.log_artifact(artifact)
+            run.log_artifact(artifact, aliases=["latest"])
             logger.info("Logged validation report to WandB")
             with open(val_report_full_path) as f:
                 report = json.load(f)
@@ -96,7 +96,7 @@ def main(cfg: DictConfig) -> None:
         if val_report_full_path.is_file() and wandb.run is not None:
             artifact = wandb.Artifact("validation_report", type="report")
             artifact.add_file(str(val_report_full_path))
-            wandb.log_artifact(artifact)
+            run.log_artifact(artifact, aliases=["latest"])
         sys.exit(1)
     finally:
         if wandb.run is not None:

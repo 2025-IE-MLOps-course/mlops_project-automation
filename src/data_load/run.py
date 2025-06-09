@@ -82,12 +82,9 @@ def main(cfg: DictConfig) -> None:
             wandb.log({"summary_stats": stats_tbl})
 
         if cfg.data_load.get("log_artifacts", True):
-            raw_art = wandb.Artifact(f"raw_data_{run.id[:8]}", type="dataset")
-            try:
-                raw_art.add_reference(f"file://{resolved_raw_path}")
-            except Exception:
-                raw_art.add_file(str(resolved_raw_path))
-            wandb.log_artifact(raw_art)
+            raw_art = wandb.Artifact("raw_data", type="dataset")
+            raw_art.add_file(str(resolved_raw_path))
+            run.log_artifact(raw_art, aliases=["latest"])
             logger.info("Logged raw data artifact to WandB")
 
         wandb.summary.update({

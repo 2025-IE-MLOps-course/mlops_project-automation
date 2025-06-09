@@ -64,16 +64,16 @@ def main(cfg: DictConfig) -> None:
         schema = {c: str(t) for c, t in df.dtypes.items()}
         wandb.summary["model_train_schema"] = schema
 
-        schema_path = PROJECT_ROOT / "artifacts" / f"model_schema_{run.id[:8]}.json"
+        schema_path = PROJECT_ROOT / "artifacts" / "model_schema.json"
         schema_path.parent.mkdir(parents=True, exist_ok=True)
         with open(schema_path, "w") as f:
             json.dump(schema, f, indent=2)
 
         schema_art = wandb.Artifact(
-            f"model_schema_{run.id[:8]}", type="schema"
+            "model_schema", type="schema"
         )
         schema_art.add_file(str(schema_path))
-        wandb.log_artifact(schema_art)
+        run.log_artifact(schema_art, aliases=["latest"])
 
         if cfg.data_load.get("log_sample_artifacts", True):
             wandb.log({"train_sample_rows": wandb.Table(dataframe=df.head(50))})
@@ -97,7 +97,7 @@ def main(cfg: DictConfig) -> None:
         if cfg.data_load.get("log_artifacts", True):
             art_specs = [
                 ("model_path", "model.pkl", "model"),
-                ("preprocessing_pipeline", "preprocessing_pipeline.pkl", "pipeline"),
+                ("preprocessing_pipeline", "preprocessing_pipeline.pkl", "preprocessing_pipeline"),
                 ("metrics_path", "metrics.json", "metrics"),
             ]
             for cfg_key, default_name, art_type in art_specs:
@@ -106,9 +106,9 @@ def main(cfg: DictConfig) -> None:
                 if cfg_key in cfg.artifacts:
                     p = PROJECT_ROOT / cfg.artifacts[cfg_key]
                 if p.is_file():
-                    art = wandb.Artifact(f"{art_type}_{run.id[:8]}", type=art_type)
+                    art = wandb.Artifact(art_type, type=art_type)
                     art.add_file(str(p))
-                    wandb.log_artifact(art)
+                    run.log_artifact(art, aliases=["latest"])
                     logger.info("Logged %s artifact to W&B", art_type)
 
     except Exception as e:

@@ -84,10 +84,10 @@ def main(cfg: DictConfig) -> None:
 
         if cfg.data_load.get("log_artifacts", True):
             artifact = wandb.Artifact(
-                f"processed_data_{run.id[:8]}", type="dataset"
+                "engineered_data", type="dataset"
             )
             artifact.add_file(str(processed_path))
-            wandb.log_artifact(artifact)
+            run.log_artifact(artifact, aliases=["latest"])
             logger.info("Logged processed data artifact to WandB")
 
         if cfg.data_load.get("log_sample_artifacts", True):
