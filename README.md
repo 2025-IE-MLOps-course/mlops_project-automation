@@ -74,7 +74,7 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 
 ### 0. Pipeline Orchestration (`src/main.py`)
 - Single entry point that orchestrates the entire MLOps workflow
-- Supports configurable pipeline stages: data validation, model training, batch inference
+- Supports configurable pipeline stages: data validation, model training, and optional batch inference
 - Integrates all modular components with robust logging and error handling
 - Enables reproducible, scriptable runs for both research and production
 
@@ -150,6 +150,9 @@ To override hyperparameters in the `model` step, pass them through the
 mlflow run src/model -P hydra_options="model.decision_tree.params.max_depth=8 model.decision_tree.params.min_samples_split=3"
 ```
 All steps log metrics and artifacts to W&B by default.
+
+Include `inference` in `main.steps` to generate predictions. For training only,
+omit it (e.g., `main.steps=data_load,data_validation,model,evaluation`).
 
 **Run inference from any server (after cloning repo and installing dependencies):**
 ```bash

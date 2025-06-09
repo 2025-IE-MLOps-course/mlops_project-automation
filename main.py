@@ -16,7 +16,7 @@ PIPELINE_STEPS = [
     "preprocess",
     "model",
     "evaluation",
-    # "inference",
+    "inference",
 ]
 
 # Only these steps accept Hydra overrides via MLflow parameters

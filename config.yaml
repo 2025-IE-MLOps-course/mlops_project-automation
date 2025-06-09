@@ -3,7 +3,7 @@
 main:
   WANDB_PROJECT: opioid_mlops_project
   WANDB_ENTITY: idiazl  # Replace with your actual wandb entity/team
-  steps: all            # e.g., "data_load,data_validation,train_model"
+  steps: all            # e.g., "data_load,data_validation,model,evaluation,inference"
   hydra_options: ""     # Add this line for CLI/MLflow runtime overrides
 
 data_source:
