@@ -82,11 +82,19 @@ def main(cfg: DictConfig) -> None:
         df.to_csv(processed_path, index=False)
         logger.info("Saved engineered data to %s", processed_path)
 
+        sample_path = processed_path.parent / "engineered_sample.csv"
+        df.head(50).to_csv(sample_path, index=False)
+        schema = {c: str(t) for c, t in df.dtypes.items()}
+        schema_path = processed_path.parent / "engineered_schema.json"
+        json.dump(schema, open(schema_path, "w"), indent=2)
+
         if cfg.data_load.get("log_artifacts", True):
             artifact = wandb.Artifact(
                 "engineered_data", type="dataset"
             )
             artifact.add_file(str(processed_path))
+            artifact.add_file(str(sample_path))
+            artifact.add_file(str(schema_path))
             run.log_artifact(artifact, aliases=["latest"])
             logger.info("Logged processed data artifact to WandB")
 

@@ -71,6 +71,9 @@ def main(cfg: DictConfig) -> None:
         df = pd.read_csv(os.path.join(eng_path, "engineered_data.csv"))
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
+        sample_path = PROJECT_ROOT / "artifacts" / "preprocess_sample.csv"
+        sample_path.parent.mkdir(parents=True, exist_ok=True)
+        df.head(50).to_csv(sample_path, index=False)
 
         # Log input data hash for traceability
         df_hash = compute_df_hash(df)
@@ -85,6 +88,7 @@ def main(cfg: DictConfig) -> None:
         wandb.summary["pipeline_schema"] = schema
         schema_art = wandb.Artifact("preprocess_schema", type="schema")
         schema_art.add_file(str(schema_path))
+        schema_art.add_file(str(sample_path))
         run.log_artifact(schema_art, aliases=["latest"])
 
         # Log sample input (first 50 rows)
@@ -116,6 +120,8 @@ def main(cfg: DictConfig) -> None:
                 "preprocessing_pipeline", type="pipeline"
             )
             artifact.add_file(str(pp_path))
+            artifact.add_file(str(schema_path))
+            artifact.add_file(str(sample_path))
             run.log_artifact(artifact, aliases=["latest"])
             logger.info("Logged preprocessing pipeline artifact to WandB")
 

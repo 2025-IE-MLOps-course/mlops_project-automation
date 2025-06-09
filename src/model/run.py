@@ -68,11 +68,14 @@ def main(cfg: DictConfig) -> None:
         schema_path.parent.mkdir(parents=True, exist_ok=True)
         with open(schema_path, "w") as f:
             json.dump(schema, f, indent=2)
+        sample_path = PROJECT_ROOT / "artifacts" / "train_sample_rows.csv"
+        df.head(50).to_csv(sample_path, index=False)
 
         schema_art = wandb.Artifact(
             "model_schema", type="schema"
         )
         schema_art.add_file(str(schema_path))
+        schema_art.add_file(str(sample_path))
         run.log_artifact(schema_art, aliases=["latest"])
 
         if cfg.data_load.get("log_sample_artifacts", True):
@@ -108,6 +111,9 @@ def main(cfg: DictConfig) -> None:
                 if p.is_file():
                     art = wandb.Artifact(art_type, type=art_type)
                     art.add_file(str(p))
+                    if art_type == "model":
+                        art.add_file(str(schema_path))
+                        art.add_file(str(sample_path))
                     run.log_artifact(art, aliases=["latest"])
                     logger.info("Logged %s artifact to W&B", art_type)
 
