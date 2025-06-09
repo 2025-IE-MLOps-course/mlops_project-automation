@@ -68,14 +68,13 @@ def main(cfg: DictConfig) -> None:
         validate_data(df, config=config_dict)
 
         # Save validated data to a temporary CSV and log to W&B
-        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".csv")
-        os.close(tmp_fd)
-        df.to_csv(tmp_path, index=False)
-        val_artifact = wandb.Artifact("validated_data", type="dataset")
-        val_artifact.add_file(tmp_path)
-        run.log_artifact(val_artifact, aliases=["latest"])
-        logger.info("Logged validated data artifact to WandB")
-        os.remove(tmp_path)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir) / "validated_data.csv"
+            df.to_csv(tmp_path, index=False)
+            val_artifact = wandb.Artifact("validated_data", type="dataset")
+            val_artifact.add_file(str(tmp_path), name="validated_data.csv")
+            run.log_artifact(val_artifact, aliases=["latest"])
+            logger.info("Logged validated data artifact to WandB")
 
         # Always log validation report to W&B (even if validation fails)
         val_report_path = cfg.data_validation.get(

@@ -83,7 +83,7 @@ def main(cfg: DictConfig) -> None:
 
         if cfg.data_load.get("log_artifacts", True):
             raw_art = wandb.Artifact("raw_data", type="dataset")
-            raw_art.add_file(str(resolved_raw_path))
+            raw_art.add_file(str(resolved_raw_path), name="raw_data.csv")
             run.log_artifact(raw_art, aliases=["latest"])
             logger.info("Logged raw data artifact to WandB")
 
