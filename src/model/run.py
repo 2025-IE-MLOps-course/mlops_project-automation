@@ -56,7 +56,24 @@ def main(cfg: DictConfig) -> None:
         # ─────────────────────────────── data ────────────────────────────────
         data_art = run.use_artifact("preprocessed_data:latest")
         data_path = data_art.download()
-        df = pd.read_csv(os.path.join(data_path, "preprocessed_data.csv"))
+
+        def _read_split(base: str, name: str) -> pd.DataFrame | None:
+            f = os.path.join(base, name)
+            return pd.read_csv(f) if os.path.isfile(f) else None
+
+        train_df = _read_split(data_path, "train_processed.csv")
+        valid_df = _read_split(data_path, "valid_processed.csv")
+        test_df = _read_split(data_path, "test_processed.csv")
+
+        # Fallback to raw split artifact if processed splits not present
+        if train_df is None or valid_df is None or test_df is None:
+            split_art = run.use_artifact("splits:latest")
+            split_path = split_art.download()
+            train_df = pd.read_csv(os.path.join(split_path, "train.csv"))
+            valid_df = pd.read_csv(os.path.join(split_path, "valid.csv"))
+            test_df = pd.read_csv(os.path.join(split_path, "test.csv"))
+
+        df = pd.concat([train_df, valid_df, test_df], ignore_index=True)
         if df.empty:
             logger.warning("Loaded dataframe is empty")
 
@@ -110,10 +127,17 @@ def main(cfg: DictConfig) -> None:
                     p = PROJECT_ROOT / cfg.artifacts[cfg_key]
                 if p.is_file():
                     art = wandb.Artifact(art_type, type=art_type)
-                    art.add_file(str(p))
                     if art_type == "model":
+                        art.add_reference(str(p))
+                        pp_path = PROJECT_ROOT / cfg.artifacts.get(
+                            "preprocessing_pipeline", "models/preprocessing_pipeline.pkl"
+                        )
+                        if pp_path.is_file():
+                            art.add_reference(str(pp_path))
                         art.add_file(str(schema_path))
                         art.add_file(str(sample_path))
+                    else:
+                        art.add_file(str(p))
                     run.log_artifact(art, aliases=["latest"])
                     logger.info("Logged %s artifact to W&B", art_type)
 
