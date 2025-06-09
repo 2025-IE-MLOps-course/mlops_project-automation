@@ -69,10 +69,10 @@ def main(cfg: DictConfig) -> None:
             json.dump(schema, open(schema_path, "w"), indent=2)
 
             schema_art = wandb.Artifact(
-                f"eval_schema_{run.id[:8]}", type="schema"
+                "evaluation_schema", type="schema"
             )
             schema_art.add_file(str(schema_path))
-            wandb.log_artifact(schema_art)
+            run.log_artifact(schema_art, aliases=["latest"])
             if cfg.data_load.get("log_sample_artifacts", True):
                 wandb.log({"eval_sample_rows": wandb.Table(dataframe=df.head(50))})
 
@@ -122,10 +122,10 @@ def main(cfg: DictConfig) -> None:
             m_path = PROJECT_ROOT / cfg.artifacts.get("metrics_path", "models/metrics.json")
             if m_path.is_file():
                 metric_art = wandb.Artifact(
-                    f"metrics_{run.id[:8]}", type="metrics"
+                    "metrics", type="metrics"
                 )
                 metric_art.add_file(str(m_path))
-                wandb.log_artifact(metric_art)
+                run.log_artifact(metric_art, aliases=["latest"])
 
     except Exception as e:
         logger.exception("Evaluation step failed")

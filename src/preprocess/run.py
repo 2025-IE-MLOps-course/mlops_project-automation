@@ -78,14 +78,14 @@ def main(cfg: DictConfig) -> None:
 
         # Log schema as artifact and summary
         schema = {col: str(dtype) for col, dtype in df.dtypes.items()}
-        schema_path = PROJECT_ROOT / "artifacts" / f"schema_{run.id[:8]}.json"
+        schema_path = PROJECT_ROOT / "artifacts" / "preprocess_schema.json"
         schema_path.parent.mkdir(parents=True, exist_ok=True)
         with open(schema_path, "w") as f:
             json.dump(schema, f, indent=2)
         wandb.summary["pipeline_schema"] = schema
-        schema_art = wandb.Artifact(f"schema_{run.id[:8]}", type="schema")
+        schema_art = wandb.Artifact("preprocess_schema", type="schema")
         schema_art.add_file(str(schema_path))
-        wandb.log_artifact(schema_art)
+        run.log_artifact(schema_art, aliases=["latest"])
 
         # Log sample input (first 50 rows)
         if cfg.data_load.get("log_sample_artifacts", True):
@@ -113,10 +113,10 @@ def main(cfg: DictConfig) -> None:
         # Log pipeline artifact
         if cfg.data_load.get("log_artifacts", True):
             artifact = wandb.Artifact(
-                f"preprocessing_pipeline_{run.id[:8]}", type="pipeline"
+                "preprocessing_pipeline", type="pipeline"
             )
             artifact.add_file(str(pp_path))
-            wandb.log_artifact(artifact)
+            run.log_artifact(artifact, aliases=["latest"])
             logger.info("Logged preprocessing pipeline artifact to WandB")
 
     except Exception as e:
