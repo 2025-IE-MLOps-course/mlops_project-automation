@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 import json
 import yaml
 import pandas as pd
+import tempfile
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -65,6 +66,16 @@ def main(cfg: DictConfig) -> None:
             config_dict = yaml.safe_load(f)
 
         validate_data(df, config=config_dict)
+
+        # Save validated data to a temporary CSV and log to W&B
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".csv")
+        os.close(tmp_fd)
+        df.to_csv(tmp_path, index=False)
+        val_artifact = wandb.Artifact("validated_data", type="dataset")
+        val_artifact.add_file(tmp_path)
+        run.log_artifact(val_artifact, aliases=["latest"])
+        logger.info("Logged validated data artifact to WandB")
+        os.remove(tmp_path)
 
         # Always log validation report to W&B (even if validation fails)
         val_report_path = cfg.data_validation.get(
