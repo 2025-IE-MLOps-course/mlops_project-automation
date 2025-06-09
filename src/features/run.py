@@ -7,6 +7,7 @@ and robust error handling.
 
 import sys
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -14,6 +15,7 @@ import hydra
 import wandb
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
+import pandas as pd
 
 # Ensure project modules are importable when executed via MLflow
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -22,7 +24,6 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from features.feature_eng import FEATURE_TRANSFORMERS
-from data_load.data_loader import get_data
 
 load_dotenv()
 
@@ -54,7 +55,10 @@ def main(cfg: DictConfig) -> None:
         )
         logger.info("Started WandB run: %s", run_name)
 
-        df = get_data(config_path=str(config_path), data_stage="raw")
+        # Load validated data from W&B artifact
+        val_art = run.use_artifact("validated_data:latest")
+        val_path = val_art.download()
+        df = pd.read_csv(os.path.join(val_path, "validated_data.csv"))
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
 

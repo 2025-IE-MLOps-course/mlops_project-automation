@@ -6,7 +6,7 @@ Trains the model, logs metrics, schema, hashes and all artifacts needed
 for reproducibility and auditability.
 """
 
-import sys, logging, hashlib, json
+import sys, logging, hashlib, json, os
 from datetime import datetime
 from pathlib import Path
 import hydra, wandb, pandas as pd
@@ -18,7 +18,6 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from data_load.data_loader import get_data
 from model.model import run_model_pipeline
 from evaluation.evaluator import generate_report
 
@@ -55,7 +54,9 @@ def main(cfg: DictConfig) -> None:
 
     try:
         # ─────────────────────────────── data ────────────────────────────────
-        df = get_data(config_path=str(PROJECT_ROOT / "config.yaml"), data_stage="raw")
+        data_art = run.use_artifact("preprocessed_data:latest")
+        data_path = data_art.download()
+        df = pd.read_csv(os.path.join(data_path, "preprocessed_data.csv"))
         if df.empty:
             logger.warning("Loaded dataframe is empty")
 

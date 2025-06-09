@@ -7,7 +7,7 @@ confusion-matrix / ROC / PR plots when the test split has ≥2
 non-NaN samples and the probability vector is at least length 2.
 """
 
-import sys, logging, hashlib, json
+import sys, logging, hashlib, json, os
 import numpy as np
 from datetime import datetime
 from pathlib import Path
@@ -22,7 +22,6 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from evaluation.evaluator import generate_report
-from data_load.data_loader import get_data
 
 load_dotenv()
 logging.basicConfig(
@@ -58,7 +57,9 @@ def main(cfg: DictConfig) -> None:
 
     try:
         # ─── Dataset traceability ───────────────────────────────
-        df = get_data(config_path=str(PROJECT_ROOT / "config.yaml"), data_stage="processed")
+        data_art = run.use_artifact("preprocessed_data:latest")
+        data_path = data_art.download()
+        df = pd.read_csv(os.path.join(data_path, "preprocessed_data.csv"))
         if not df.empty:
             wandb.summary["eval_data_hash"] = df_hash(df)
             schema = {c: str(t) for c, t in df.dtypes.items()}
@@ -76,7 +77,14 @@ def main(cfg: DictConfig) -> None:
                 wandb.log({"eval_sample_rows": wandb.Table(dataframe=df.head(50))})
 
         # ─── Metrics and arrays ─────────────────────────────────
-        report, y_true, y_pred, y_proba = generate_report(cfg_dict)
+        model_art = run.use_artifact("model:latest")
+        model_dir = model_art.download()
+        model_file = os.path.join(model_dir, "model.pkl")
+        report, y_true, y_pred, y_proba = generate_report(
+            cfg_dict,
+            model_path=model_file,
+            processed_dir=data_path,
+        )
 
         flat = {}
         for split, metrics in report.items():

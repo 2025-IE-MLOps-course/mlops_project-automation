@@ -9,6 +9,7 @@ Logs input data hash, schema, sample, and feature stats for reproducibility and 
 
 import sys
 import logging
+import os
 import pickle
 import hashlib
 import json
@@ -26,7 +27,6 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from data_load.data_loader import get_data
 from preprocess.preprocessing import build_preprocessing_pipeline
 
 load_dotenv()
@@ -65,7 +65,10 @@ def main(cfg: DictConfig) -> None:
         )
         logger.info("Started WandB run: %s", run_name)
 
-        df = get_data(config_path=str(config_path), data_stage="processed")
+        # Load engineered data from W&B artifact
+        eng_art = run.use_artifact("engineered_data:latest")
+        eng_path = eng_art.download()
+        df = pd.read_csv(os.path.join(eng_path, "engineered_data.csv"))
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
 
