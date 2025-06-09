@@ -12,6 +12,7 @@ import logging
 import hashlib
 import json
 import time
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +21,7 @@ import wandb
 import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
+import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -79,9 +81,26 @@ def main(cfg: DictConfig) -> None:
             art.add_file(str(schema_path))
             wandb.log_artifact(art)
 
+        # Download model and preprocessing artifacts
+        model_art = run.use_artifact("model:latest")
+        model_dir = model_art.download()
+        model_path = os.path.join(model_dir, "model.pkl")
+
+        pp_art = run.use_artifact("preprocessing_pipeline:latest")
+        pp_dir = pp_art.download()
+        pp_path = os.path.join(pp_dir, "preprocessing_pipeline.pkl")
+
+        # Write temp config with artifact paths
+        cfg_dict["artifacts"]["model_path"] = model_path
+        cfg_dict["artifacts"]["preprocessing_pipeline"] = pp_path
+        temp_cfg = PROJECT_ROOT / "artifacts" / f"infer_cfg_{run.id[:8]}.yaml"
+        temp_cfg.parent.mkdir(parents=True, exist_ok=True)
+        with open(temp_cfg, "w") as f:
+            yaml.safe_dump(cfg_dict, f)
+
         # Track inference duration
         t0 = time.time()
-        run_inference(str(input_path), str(config_path), str(output_path))
+        run_inference(str(input_path), str(temp_cfg), str(output_path))
         duration = time.time() - t0
         wandb.summary["inference_duration_seconds"] = duration
 

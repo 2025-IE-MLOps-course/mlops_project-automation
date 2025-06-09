@@ -6,6 +6,7 @@ MLflow-compatible, modular data validation step with Hydra config, W&B logging, 
 
 import sys
 import logging
+import os
 import hydra
 import wandb
 from omegaconf import DictConfig
@@ -14,13 +15,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 import json
 import yaml
+import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from data_load.data_loader import get_data
 from data_validation.data_validator import validate_data
 
 load_dotenv() 
@@ -52,12 +53,10 @@ def main(cfg: DictConfig) -> None:
         )
         logger.info("Started WandB run: %s", run_name)
 
-        # Determine what data to validate (raw by default)
-        data_stage = getattr(cfg.data_load, "data_stage", "raw")
-        df = get_data(
-            config_path=str(config_path),
-            data_stage=data_stage
-        )
+        # Load raw data artifact from W&B
+        raw_art = run.use_artifact("raw_data:latest")
+        raw_path = raw_art.download()
+        df = pd.read_csv(os.path.join(raw_path, "raw_data.csv"))
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
 
