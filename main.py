@@ -4,6 +4,8 @@ import os
 import hydra
 from omegaconf import DictConfig
 from dotenv import load_dotenv
+from datetime import datetime
+import wandb
 
 load_dotenv()  # Only for secrets
 
@@ -26,6 +28,15 @@ def main(cfg: DictConfig):
     os.environ["WANDB_PROJECT"] = cfg.main.WANDB_PROJECT
     os.environ["WANDB_ENTITY"] = cfg.main.WANDB_ENTITY
 
+    run_name = f"orchestrator_{datetime.now():%Y%m%d_%H%M%S}"
+    run = wandb.init(
+        project=cfg.main.WANDB_PROJECT,
+        entity=cfg.main.WANDB_ENTITY,
+        job_type="orchestrator",
+        name=run_name,
+    )
+    print(f"Started WandB run: {run.name}")
+
     steps_raw = cfg.main.steps
     active_steps = [s.strip() for s in steps_raw.split(",") if s.strip()] \
         if steps_raw != "all" else PIPELINE_STEPS
@@ -42,9 +53,10 @@ def main(cfg: DictConfig):
             if hydra_override and step in STEPS_WITH_OVERRIDES:
                 params["hydra_options"] = hydra_override
 
-            print(f"Running step: {step}")
+            print(f"Running step: {step} (W&B run: {run.name})")
             mlflow.run(step_dir, "main", parameters=params)
 
+    wandb.finish()
 
 if __name__ == "__main__":
     main()
