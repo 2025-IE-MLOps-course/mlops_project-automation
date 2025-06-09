@@ -3,7 +3,7 @@ inference/run.py
 
 MLflow-compatible batch inference step with Hydra config and W&B logging.
 Uses the trained model and preprocessing pipeline to generate predictions
-for new data. Logs prediction artifact, input hash/schema, duration, 
+for new data. Logs prediction artifact, input hash/schema, duration,
 prediction probability stats, and sample table to W&B.
 """
 
@@ -38,8 +38,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("inference")
 
+
 def df_hash(df: pd.DataFrame) -> str:
     return hashlib.sha256(pd.util.hash_pandas_object(df, index=True).values).hexdigest()
+
 
 @hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
@@ -65,6 +67,20 @@ def main(cfg: DictConfig) -> None:
         input_path = PROJECT_ROOT / cfg.inference.input_csv
         output_path = PROJECT_ROOT / cfg.inference.output_csv
 
+        # Prefer W&B artifact for input data to preserve lineage
+        try:
+            in_art = run.use_artifact("predictions_input:latest")
+            art_dir = Path(in_art.download())
+            csv_files = list(art_dir.glob("*.csv"))
+            if csv_files:
+                input_path = csv_files[0]
+                logger.info("Using predictions_input artifact: %s", input_path)
+        except Exception:
+            logger.warning(
+                "predictions_input artifact not found; falling back to %s",
+                input_path,
+            )
+
         # Log input data hash and schema
         if input_path.is_file():
             in_df = pd.read_csv(input_path)
@@ -72,7 +88,9 @@ def main(cfg: DictConfig) -> None:
             input_schema = {col: str(dtype) for col, dtype in in_df.dtypes.items()}
             wandb.summary["input_data_schema"] = input_schema
 
-            schema_path = PROJECT_ROOT / "artifacts" / f"infer_input_schema_{run.id[:8]}.json"
+            schema_path = (
+                PROJECT_ROOT / "artifacts" / f"infer_input_schema_{run.id[:8]}.json"
+            )
             schema_path.parent.mkdir(parents=True, exist_ok=True)
             with open(schema_path, "w") as f:
                 json.dump(input_schema, f, indent=2)
@@ -109,9 +127,15 @@ def main(cfg: DictConfig) -> None:
             wandb.summary["prediction_columns"] = list(out_df.columns)
 
             if "prediction_proba" in out_df.columns:
-                wandb.summary["prediction_proba_mean"] = float(out_df["prediction_proba"].mean())
-                wandb.summary["prediction_proba_min"] = float(out_df["prediction_proba"].min())
-                wandb.summary["prediction_proba_max"] = float(out_df["prediction_proba"].max())
+                wandb.summary["prediction_proba_mean"] = float(
+                    out_df["prediction_proba"].mean()
+                )
+                wandb.summary["prediction_proba_min"] = float(
+                    out_df["prediction_proba"].min()
+                )
+                wandb.summary["prediction_proba_max"] = float(
+                    out_df["prediction_proba"].max()
+                )
 
             # Log predictions as artifact
             if cfg.data_load.get("log_artifacts", True):
@@ -129,6 +153,7 @@ def main(cfg: DictConfig) -> None:
         if wandb.run is not None:
             wandb.finish()
             logger.info("WandB run finished")
+
 
 if __name__ == "__main__":
     main()
