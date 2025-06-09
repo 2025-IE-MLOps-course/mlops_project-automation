@@ -59,19 +59,22 @@ def main(cfg: DictConfig) -> None:
         # ─── Dataset traceability ───────────────────────────────
         data_art = run.use_artifact("preprocessed_data:latest")
         data_path = data_art.download()
+        schema_path = PROJECT_ROOT / "artifacts" / f"eval_schema_{run.id[:8]}.json"
+        sample_path = PROJECT_ROOT / "artifacts" / f"eval_sample_{run.id[:8]}.csv"
         df = pd.read_csv(os.path.join(data_path, "preprocessed_data.csv"))
         if not df.empty:
             wandb.summary["eval_data_hash"] = df_hash(df)
             schema = {c: str(t) for c, t in df.dtypes.items()}
             wandb.summary["eval_data_schema"] = schema
-            schema_path = PROJECT_ROOT / "artifacts" / f"eval_schema_{run.id[:8]}.json"
             schema_path.parent.mkdir(parents=True, exist_ok=True)
             json.dump(schema, open(schema_path, "w"), indent=2)
+            df.head(50).to_csv(sample_path, index=False)
 
             schema_art = wandb.Artifact(
                 "evaluation_schema", type="schema"
             )
             schema_art.add_file(str(schema_path))
+            schema_art.add_file(str(sample_path))
             run.log_artifact(schema_art, aliases=["latest"])
             if cfg.data_load.get("log_sample_artifacts", True):
                 wandb.log({"eval_sample_rows": wandb.Table(dataframe=df.head(50))})
@@ -122,9 +125,13 @@ def main(cfg: DictConfig) -> None:
             m_path = PROJECT_ROOT / cfg.artifacts.get("metrics_path", "models/metrics.json")
             if m_path.is_file():
                 metric_art = wandb.Artifact(
-                    "metrics", type="metrics"
+                    "eval_metrics", type="metrics"
                 )
                 metric_art.add_file(str(m_path))
+                if schema_path.is_file():
+                    metric_art.add_file(str(schema_path))
+                if sample_path.is_file():
+                    metric_art.add_file(str(sample_path))
                 run.log_artifact(metric_art, aliases=["latest"])
 
     except Exception as e:
