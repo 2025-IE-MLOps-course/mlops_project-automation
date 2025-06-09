@@ -27,7 +27,11 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from preprocess.preprocessing import build_preprocessing_pipeline
+from preprocess.preprocessing import (
+    build_preprocessing_pipeline,
+    get_output_feature_names,
+)
+from sklearn.model_selection import train_test_split
 
 load_dotenv()
 
@@ -124,6 +128,60 @@ def main(cfg: DictConfig) -> None:
             artifact.add_file(str(sample_path))
             run.log_artifact(artifact, aliases=["latest"])
             logger.info("Logged preprocessing pipeline artifact to WandB")
+
+        # ────────────────────── transform & save data ──────────────────────
+        logger.info("Transforming engineered dataframe with preprocessing pipeline")
+        X_proc = pipeline.transform(df)
+        out_cols = get_output_feature_names(
+            pipeline, df.columns.tolist(), cfg_dict
+        )
+        df_proc = pd.DataFrame(X_proc, columns=out_cols)
+        engineered = cfg.features.get("engineered", [])
+        if engineered:
+            df_proc = df_proc[[c for c in engineered if c in df_proc.columns]]
+        df_proc[cfg.target] = df[cfg.target]
+
+        processed_dir = PROJECT_ROOT / cfg.artifacts.get(
+            "processed_dir", "data/processed"
+        )
+        processed_dir.mkdir(parents=True, exist_ok=True)
+        full_path = processed_dir / "preprocessed_data.csv"
+        df_proc.to_csv(full_path, index=False)
+
+        # Train/valid/test splits
+        split_cfg = cfg.data_split
+        test_size = split_cfg.get("test_size", 0.2)
+        valid_size = split_cfg.get("valid_size", 0.2)
+        rand_state = split_cfg.get("random_state", 42)
+        train_df, temp_df = train_test_split(
+            df_proc,
+            test_size=(test_size + valid_size),
+            random_state=rand_state,
+            stratify=df_proc[cfg.target],
+        )
+        rel_valid = valid_size / (test_size + valid_size)
+        valid_df, test_df = train_test_split(
+            temp_df,
+            test_size=rel_valid,
+            random_state=rand_state,
+            stratify=temp_df[cfg.target],
+        )
+        train_df.to_csv(processed_dir / "train_processed.csv", index=False)
+        valid_df.to_csv(processed_dir / "valid_processed.csv", index=False)
+        test_df.to_csv(processed_dir / "test_processed.csv", index=False)
+
+        # Log processed dataset artifact
+        if cfg.data_load.get("log_artifacts", True):
+            data_art = wandb.Artifact("preprocessed_data", type="dataset")
+            for p in [
+                full_path,
+                processed_dir / "train_processed.csv",
+                processed_dir / "valid_processed.csv",
+                processed_dir / "test_processed.csv",
+            ]:
+                data_art.add_file(str(p))
+            run.log_artifact(data_art, aliases=["latest"])
+            logger.info("Logged processed data artifact to WandB")
 
     except Exception as e:
         logger.exception("Failed during preprocessing step")
