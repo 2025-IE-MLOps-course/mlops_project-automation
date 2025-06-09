@@ -12,7 +12,6 @@ import logging
 import hashlib
 import json
 import time
-import os
 from datetime import datetime
 from pathlib import Path
 
@@ -81,18 +80,13 @@ def main(cfg: DictConfig) -> None:
             art.add_file(str(schema_path))
             run.log_artifact(art, aliases=["latest"])
 
-        # Download model and preprocessing artifacts
-        model_art = run.use_artifact("model:latest")
-        model_dir = model_art.download()
-        model_path = os.path.join(model_dir, "model.pkl")
+            # Optionally log the full input CSV for lineage
+            if cfg.data_load.get("log_artifacts", True):
+                in_art = wandb.Artifact("predictions_input", type="predictions_input")
+                in_art.add_file(str(input_path))
+                run.log_artifact(in_art, aliases=["latest"])
 
-        pp_art = run.use_artifact("preprocessing_pipeline:latest")
-        pp_dir = pp_art.download()
-        pp_path = os.path.join(pp_dir, "preprocessing_pipeline.pkl")
-
-        # Write temp config with artifact paths
-        cfg_dict["artifacts"]["model_path"] = model_path
-        cfg_dict["artifacts"]["preprocessing_pipeline"] = pp_path
+        # Save resolved config for reproducibility
         temp_cfg = PROJECT_ROOT / "artifacts" / f"infer_cfg_{run.id[:8]}.yaml"
         temp_cfg.parent.mkdir(parents=True, exist_ok=True)
         with open(temp_cfg, "w") as f:
@@ -100,7 +94,7 @@ def main(cfg: DictConfig) -> None:
 
         # Track inference duration
         t0 = time.time()
-        run_inference(str(input_path), str(temp_cfg), str(output_path))
+        run_inference(str(input_path), str(temp_cfg), str(output_path), run=run)
         duration = time.time() - t0
         wandb.summary["inference_duration_seconds"] = duration
 

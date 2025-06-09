@@ -15,6 +15,7 @@ import argparse
 import logging
 import pickle
 import sys
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -50,7 +51,9 @@ def _setup_logging():
     )
 
 
-def run_inference(input_csv: str, config_yaml: str, output_csv: str) -> None:
+def run_inference(
+    input_csv: str, config_yaml: str, output_csv: str, run: "wandb.sdk.wandb_run.Run" | None = None
+) -> None:
     """
     Run batch inference:
     1. Load config, preprocessing pipeline, and trained model
@@ -65,20 +68,35 @@ def run_inference(input_csv: str, config_yaml: str, output_csv: str) -> None:
     with open(config_yaml, "r", encoding="utf-8") as fh:
         config: Dict = yaml.safe_load(fh)
 
-    pp_path = _resolve(
-        config.get("artifacts", {}).get(
-            "preprocessing_pipeline", "models/preprocessing_pipeline.pkl"
+    if run is not None:
+        model_art = run.use_artifact("model:latest")
+        model_dir = model_art.download()
+        model = _load_pickle(
+            os.path.join(model_dir, "model.pkl"),
+            "model",
         )
-    )
-    model_path = _resolve(
-        config.get("artifacts", {}).get("model_path", "models/model.pkl")
-    )
 
-    logger.info("Loading preprocessing pipeline: %s", pp_path)
-    pipeline = _load_pickle(str(pp_path), "preprocessing pipeline")
+        pp_art = run.use_artifact("preprocessing_pipeline:latest")
+        pp_dir = pp_art.download()
+        pipeline = _load_pickle(
+            os.path.join(pp_dir, "preprocessing_pipeline.pkl"),
+            "preprocessing pipeline",
+        )
+    else:
+        pp_path = _resolve(
+            config.get("artifacts", {}).get(
+                "preprocessing_pipeline", "models/preprocessing_pipeline.pkl"
+            )
+        )
+        model_path = _resolve(
+            config.get("artifacts", {}).get("model_path", "models/model.pkl")
+        )
 
-    logger.info("Loading trained model: %s", model_path)
-    model = _load_pickle(str(model_path), "model")
+        logger.info("Loading preprocessing pipeline: %s", pp_path)
+        pipeline = _load_pickle(str(pp_path), "preprocessing pipeline")
+
+        logger.info("Loading trained model: %s", model_path)
+        model = _load_pickle(str(model_path), "model")
 
     # ── 2. Read raw data and basic validation ─────────────────────────────
     logger.info("Reading input CSV: %s", input_csv)
