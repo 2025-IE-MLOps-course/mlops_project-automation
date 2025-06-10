@@ -16,6 +16,7 @@ import wandb
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
 import pandas as pd
+import json
 
 # Ensure project modules are importable when executed via MLflow
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
