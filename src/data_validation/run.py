@@ -65,6 +65,15 @@ def main(cfg: DictConfig) -> None:
         with open(config_path, "r") as f:
             config_dict = yaml.safe_load(f)
 
+        # Resolve validation report path relative to project root so that
+        # validate_data writes it to a predictable location regardless of
+        # Hydra's working directory.
+        val_report_rel = config_dict.get("data_validation", {}).get(
+            "report_path", "logs/validation_report.json")
+        val_report_full = PROJECT_ROOT / val_report_rel
+        config_dict.setdefault("data_validation", {})[
+            "report_path"] = str(val_report_full)
+
         validate_data(df, config=config_dict)
 
         # Save validated data to a temporary CSV and log to W&B
@@ -77,9 +86,7 @@ def main(cfg: DictConfig) -> None:
             logger.info("Logged validated data artifact to WandB")
 
         # Always log validation report to W&B (even if validation fails)
-        val_report_path = cfg.data_validation.get(
-            "report_path", "logs/validation_report.json")
-        val_report_full_path = PROJECT_ROOT / val_report_path
+        val_report_full_path = val_report_full
         if val_report_full_path.is_file():
             artifact = wandb.Artifact("validation_report", type="report")
             artifact.add_file(str(val_report_full_path))
@@ -100,12 +107,9 @@ def main(cfg: DictConfig) -> None:
         if run is not None:
             run.alert(title="Data Validation Error", text=str(e))
         # Always attempt to log the artifact if it exists
-        val_report_path = cfg.data_validation.get(
-            "report_path", "logs/validation_report.json")
-        val_report_full_path = PROJECT_ROOT / val_report_path
-        if val_report_full_path.is_file() and wandb.run is not None:
+        if val_report_full.is_file() and wandb.run is not None:
             artifact = wandb.Artifact("validation_report", type="report")
-            artifact.add_file(str(val_report_full_path))
+            artifact.add_file(str(val_report_full))
             run.log_artifact(artifact, aliases=["latest"])
         sys.exit(1)
     finally:
