@@ -55,28 +55,22 @@ def main(cfg: DictConfig) -> None:
 
     try:
         # ─────────────────────────────── data ────────────────────────────────
-        data_art = run.use_artifact("preprocessed_data:latest")
+        data_art = run.use_artifact("validated_data:latest")
         with tempfile.TemporaryDirectory() as tmp_dir:
             data_path = data_art.download(root=tmp_dir)
 
-            def _read_split(base: str, name: str) -> pd.DataFrame | None:
-                f = os.path.join(base, name)
-                return pd.read_csv(f) if os.path.isfile(f) else None
-
-            train_df = _read_split(data_path, "train_processed.csv")
-            valid_df = _read_split(data_path, "valid_processed.csv")
-            test_df = _read_split(data_path, "test_processed.csv")
-
-            # Fallback to raw split artifact if processed splits not present
-            if train_df is None or valid_df is None or test_df is None:
+            data_file = os.path.join(data_path, "validated_data.csv")
+            if os.path.isfile(data_file):
+                df = pd.read_csv(data_file)
+            else:
+                # Fallback to raw split artifact
                 split_art = run.use_artifact("splits:latest")
                 split_path = split_art.download(root=tmp_dir)
                 train_df = pd.read_csv(os.path.join(split_path, "train.csv"))
                 valid_df = pd.read_csv(os.path.join(split_path, "valid.csv"))
                 test_df = pd.read_csv(os.path.join(split_path, "test.csv"))
+                df = pd.concat([train_df, valid_df, test_df], ignore_index=True)
 
-
-        df = pd.concat([train_df, valid_df, test_df], ignore_index=True)
         if df.empty:
             logger.warning("Loaded dataframe is empty")
 
