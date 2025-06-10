@@ -128,12 +128,12 @@ def main(cfg: DictConfig) -> None:
                 if p.is_file():
                     art = wandb.Artifact(art_type, type=art_type)
                     if art_type == "model":
-                        art.add_reference(str(p))
+                        art.add_file(str(p))
                         pp_path = PROJECT_ROOT / cfg.artifacts.get(
                             "preprocessing_pipeline", "models/preprocessing_pipeline.pkl"
                         )
                         if pp_path.is_file():
-                            art.add_reference(str(pp_path))
+                            art.add_file(str(pp_path))
                         art.add_file(str(schema_path))
                         art.add_file(str(sample_path))
                     else:
