@@ -194,7 +194,7 @@ pytest
 
 ## 📜 License
 
-This project is for academic and educational purposes. See `LICENSE` for details.
+This project is for academic and educational purposes. See the [MIT License](LICENSE) for details.
 
 ---
 
