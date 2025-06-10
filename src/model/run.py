@@ -148,6 +148,18 @@ def main(cfg: DictConfig) -> None:
                 run.log_artifact(splits_art, aliases=["latest"])
                 logger.info("Logged splits artifact to W&B")
 
+            # Log processed train/valid/test splits for evaluation stage
+            processed_dir = PROJECT_ROOT / cfg.artifacts.get("processed_dir", "data/processed")
+            proc_files = [processed_dir / f for f in [
+                "train_processed.csv", "valid_processed.csv", "test_processed.csv"
+            ]]
+            if all(p.is_file() for p in proc_files):
+                proc_art = wandb.Artifact("processed_data", type="dataset")
+                for p in proc_files:
+                    proc_art.add_file(str(p))
+                run.log_artifact(proc_art, aliases=["latest"])
+                logger.info("Logged processed data artifact to W&B")
+
     except Exception as e:
         logger.exception("Model step failed")
         run.alert(title="Model Step Error", text=str(e))
