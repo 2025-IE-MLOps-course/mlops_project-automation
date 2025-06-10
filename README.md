@@ -86,7 +86,7 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 ### 2. Data Validation (`src/data_validation/data_validator.py`)
 - Validates schema, column types, ranges, missing values
 - Configurable strictness: `raise` or `warn` on errors
-- Outputs detailed validation reports (JSON)
+- Outputs detailed validation reports (JSON) and logs an HTML summary to W&B
 
 ### 3. Model Training, Feature Engineering & Preprocessing (`src/model/model.py`)
 - Performs all feature engineering and preprocessing within the training step
