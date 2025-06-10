@@ -17,6 +17,7 @@ import json
 import yaml
 import pandas as pd
 import tempfile
+from typing import Dict, Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -33,6 +34,48 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger("data_validation")
+
+
+def _html_from_report(report: Dict[str, Any]) -> str:
+    """Create a simple HTML summary table from the validation report."""
+    lines = ["<h2>Data Validation Report</h2>"]
+    result = report.get("result", "unknown")
+    lines.append(f"<p><b>Result:</b> {result}</p>")
+    lines.append(
+        f"<p>Errors: {len(report.get('errors', []))} | Warnings: {len(report.get('warnings', []))}</p>"
+    )
+
+    if report.get("errors"):
+        lines.append("<h3>Errors</h3><ul>")
+        for e in report["errors"]:
+            lines.append(f"<li>{e}</li>")
+        lines.append("</ul>")
+
+    if report.get("warnings"):
+        lines.append("<h3>Warnings</h3><ul>")
+        for w in report["warnings"]:
+            lines.append(f"<li>{w}</li>")
+        lines.append("</ul>")
+
+    details = report.get("details", {})
+    if details:
+        keys = set()
+        for d in details.values():
+            keys.update(d.keys())
+        columns = ["column"] + sorted(keys)
+        lines.append("<table border='1'><tr>")
+        for c in columns:
+            lines.append(f"<th>{c}</th>")
+        lines.append("</tr>")
+        for col, d in details.items():
+            lines.append("<tr>")
+            for c in columns:
+                val = col if c == "column" else d.get(c, "")
+                lines.append(f"<td>{val}</td>")
+            lines.append("</tr>")
+        lines.append("</table>")
+
+    return "\n".join(lines)
 
 
 @hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
@@ -100,6 +143,8 @@ def main(cfg: DictConfig) -> None:
                 "validation_errors": len(report.get("errors", [])),
                 "validation_warnings": len(report.get("warnings", [])),
             })
+            html = _html_from_report(report)
+            wandb.log({"validation_report": wandb.Html(html)})
         else:
             logger.warning("Validation report not found for logging.")
 
