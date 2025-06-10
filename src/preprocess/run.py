@@ -74,7 +74,9 @@ def main(cfg: DictConfig) -> None:
         eng_art = run.use_artifact("engineered_data:latest")
         with tempfile.TemporaryDirectory() as tmp_dir:
             eng_path = eng_art.download(root=tmp_dir)
-            df = pd.read_csv(os.path.join(eng_path, "engineered_data.csv"))
+            # Determine file name from config in case it was changed
+            csv_name = Path(cfg.data_source.processed_path).name
+            df = pd.read_csv(os.path.join(eng_path, csv_name))
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
         sample_path = PROJECT_ROOT / "artifacts" / "preprocess_sample.csv"
