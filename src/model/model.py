@@ -3,6 +3,7 @@ model.py
 
 Leakage-proof, end-to-end MLOps pipeline:
 - Splits raw data first
+- Performs feature engineering and preprocessing inside this step
 - Fits preprocessing pipeline ONLY on train split, applies to valid/test
 - Trains model, evaluates, and saves model and preprocessing artifacts
 """

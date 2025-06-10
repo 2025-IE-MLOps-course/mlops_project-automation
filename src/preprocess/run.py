@@ -2,6 +2,8 @@
 preprocess/run.py
 
 MLflow-compatible preprocessing step with Hydra config and W&B logging.
+This module can still be run on its own, but in the default pipeline the
+preprocessing logic is triggered from within the model step.
 Builds the preprocessing pipeline defined in ``config.yaml`` and saves it
 as a pickle artifact for downstream stages.
 Logs input data hash, schema, sample, and feature stats for reproducibility and best MLOps practices.

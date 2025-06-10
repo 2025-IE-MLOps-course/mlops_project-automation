@@ -1,8 +1,9 @@
 """
 feature_eng/run.py
 
-MLflow-compatible feature engineering step with Hydra config, W&B logging,
-and robust error handling.
+MLflow-compatible feature engineering step with Hydra config and W&B logging.
+While you can execute this module independently, in the standard workflow its
+transformers are called from the model step rather than as a separate stage.
 """
 
 import sys
