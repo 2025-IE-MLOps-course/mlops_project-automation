@@ -11,7 +11,7 @@ This repository provides a modular, **production-quality** MLOps pipeline for bi
 
 **Phase 1: Modularization, Testing, and Best Practices**
 - Jupyter notebook translated into well-documented, test-driven Python modules
-- End-to-end pipeline: data ingestion, validation, feature engineering, preprocessing, model training, evaluation, and batch inference
+ - End-to-end pipeline: data ingestion, validation, model training (with integrated feature engineering and preprocessing), evaluation, and batch inference
 - Robust configuration via `config.yaml` and reproducibility through explicit artifact management
 - Extensive unit testing with pytest
 - Strict adherence to software engineering and MLOps best practices
@@ -38,10 +38,10 @@ This repository provides a modular, **production-quality** MLOps pipeline for bi
 │   ├── data_load/               # Data ingestion utilities
 │   ├── data_validation/         # Config-driven schema and data validation
 │   ├── evaluation/              # Model evaluation (metrics, confusion matrix, etc.)
-│   ├── features/                # Feature engineering transformers (scikit-learn compatible)
 │   ├── inference/               # Batch inference script
-│   ├── model/                   # End-to-end training and evaluation logic
-│   └── preprocess/              # Preprocessing pipeline assembly
+│   ├── model/                   # Training step with feature engineering & preprocessing
+│   ├── features/                # Feature engineering utilities (used within model step)
+│   └── preprocess/              # Preprocessing utilities (used within model step)
 ├── tests/                       # Unit and integration tests (pytest)
 ```
 
@@ -88,25 +88,18 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 - Configurable strictness: `raise` or `warn` on errors
 - Outputs detailed validation reports (JSON)
 
-### 3. Feature Engineering (`src/features/feature_eng.py`)
-- Implements scikit-learn compatible transformers (e.g., clinical risk score)
-- Easily extendable for future feature construction
-
-### 4. Preprocessing Pipeline (`src/preprocess/preprocessing.py`)
-- Modular scikit-learn pipelines
-- Prevents data leakage: pipeline fit **only on train split**
-
-### 5. Model Training and Evaluation (`src/model/model.py`)
+### 3. Model Training, Feature Engineering & Preprocessing (`src/model/model.py`)
+- Performs all feature engineering and preprocessing within the training step
 - Data split (train/valid/test) with stratification
 - Model registry (easily swap DecisionTree, LogisticRegression, RandomForest)
 - Evaluation: accuracy, precision, recall, specificity, F1, ROC AUC, etc.
- - Metrics, models, pipeline, and raw data splits saved as artifacts
+- Metrics, models, pipeline, and raw data splits saved as artifacts
 
-### 6. Batch Inference (`src/inference/inferencer.py`)
+### 4. Batch Inference (`src/inference/inferencer.py`)
 - Loads preprocessing and model artifacts
 - Transforms new data, predicts outcomes, exports CSV
 
-### 7. Unit Testing (`tests/`)
+### 5. Unit Testing (`tests/`)
 - Full pytest suite for each module
 - Sample/mock data provided for CI/CD
 
