@@ -29,6 +29,7 @@ data/processed/
 data/splits/
 data/raw/
 data/inference/
+*.csv
 
 # OS files
 .DS_Store
@@ -47,6 +48,7 @@ Thumbs.db
 # Mlflow and WandB tracking files
 mlruns/
 wandb/
+
 
 # Hydra config files
 outputs/
