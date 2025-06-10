@@ -169,10 +169,9 @@ pytest
 
 ## 📈 Next Steps (Planned Enhancements)
 
-- **Experiment Tracking:** Extend W&B dashboards and MLflow artifact management
 - **CI/CD Automation:** Add GitHub Actions for linting, testing, and pipeline automation
-- **Dynamic Configuration:** Leverage Hydra for advanced multi-environment settings
-- **Production Monitoring:** Add robust logging, alerting, and drift monitoring tools
+- **Online Serving:** Incorporate FastAPI for real-time, online serving of the trained model
+- **Containerization:** Dockerize the project to ensure portability, reproducibility, and ease of deployment across environments
 
 ---
 
