@@ -100,7 +100,7 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 - Data split (train/valid/test) with stratification
 - Model registry (easily swap DecisionTree, LogisticRegression, RandomForest)
 - Evaluation: accuracy, precision, recall, specificity, F1, ROC AUC, etc.
-- Metrics, models, and pipeline saved as artifacts
+ - Metrics, models, pipeline, and raw data splits saved as artifacts
 
 ### 6. Batch Inference (`src/inference/inferencer.py`)
 - Loads preprocessing and model artifacts
