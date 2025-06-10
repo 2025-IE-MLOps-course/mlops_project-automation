@@ -42,7 +42,7 @@ def main(cfg: DictConfig):
     hydra_override = cfg.main.hydra_options if hasattr(
         cfg.main, "hydra_options") else ""
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
+    with tempfile.TemporaryDirectory():
         for step in active_steps:
             step_dir = os.path.join(
                 hydra.utils.get_original_cwd(), "src", step)
