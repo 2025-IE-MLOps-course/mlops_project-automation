@@ -94,13 +94,20 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 - Data split (train/valid/test) with stratification
 - Model registry (easily swap DecisionTree, LogisticRegression, RandomForest)
 - Evaluation: accuracy, precision, recall, specificity, F1, ROC AUC, etc.
-- Metrics, models, pipeline, and raw data splits saved as artifacts
+- Logs raw and processed splits to W&B and saves metrics, models, and preprocessing pipeline as artifacts
 
-### 4. Batch Inference (`src/inference/inferencer.py`)
+### 4. Evaluation (`src/evaluation/run.py`)
+- Loads the `model` and `processed_data` artifacts
+- Reconstructs processed train/valid/test splits for metrics
+- Logs dataset hash, schema, and sample rows to W&B
+- Generates confusion matrix, ROC and PR curves when applicable
+- Saves metrics JSON as an artifact
+
+### 5. Batch Inference (`src/inference/inferencer.py`)
 - Loads preprocessing and model artifacts
 - Transforms new data, predicts outcomes, exports CSV
 
-### 5. Unit Testing (`tests/`)
+### 6. Unit Testing (`tests/`)
 - Full pytest suite for each module
 - Sample/mock data provided for CI/CD
 
