@@ -14,6 +14,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
+import tempfile
 
 import hydra
 import wandb
@@ -70,11 +71,12 @@ def main(cfg: DictConfig) -> None:
         # Prefer W&B artifact for input data to preserve lineage
         try:
             in_art = run.use_artifact("predictions_input:latest")
-            art_dir = Path(in_art.download())
-            csv_files = list(art_dir.glob("*.csv"))
-            if csv_files:
-                input_path = csv_files[0]
-                logger.info("Using predictions_input artifact: %s", input_path)
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                art_dir = Path(in_art.download(root=tmp_dir))
+                csv_files = list(art_dir.glob("*.csv"))
+                if csv_files:
+                    input_path = csv_files[0]
+                    logger.info("Using predictions_input artifact: %s", input_path)
         except Exception:
             logger.warning(
                 "predictions_input artifact not found; falling back to %s",

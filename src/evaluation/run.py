@@ -9,6 +9,7 @@ non-NaN samples and the probability vector is at least length 2.
 
 import sys, logging, hashlib, json, os
 import numpy as np
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -58,36 +59,37 @@ def main(cfg: DictConfig) -> None:
     try:
         # ─── Dataset traceability ───────────────────────────────
         data_art = run.use_artifact("preprocessed_data:latest")
-        data_path = data_art.download()
-        schema_path = PROJECT_ROOT / "artifacts" / f"eval_schema_{run.id[:8]}.json"
-        sample_path = PROJECT_ROOT / "artifacts" / f"eval_sample_{run.id[:8]}.csv"
-        df = pd.read_csv(os.path.join(data_path, "preprocessed_data.csv"))
-        if not df.empty:
-            wandb.summary["eval_data_hash"] = df_hash(df)
-            schema = {c: str(t) for c, t in df.dtypes.items()}
-            wandb.summary["eval_data_schema"] = schema
-            schema_path.parent.mkdir(parents=True, exist_ok=True)
-            json.dump(schema, open(schema_path, "w"), indent=2)
-            df.head(50).to_csv(sample_path, index=False)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            data_path = data_art.download(root=tmp_dir)
+            schema_path = PROJECT_ROOT / "artifacts" / f"eval_schema_{run.id[:8]}.json"
+            sample_path = PROJECT_ROOT / "artifacts" / f"eval_sample_{run.id[:8]}.csv"
+            df = pd.read_csv(os.path.join(data_path, "preprocessed_data.csv"))
+            if not df.empty:
+                wandb.summary["eval_data_hash"] = df_hash(df)
+                schema = {c: str(t) for c, t in df.dtypes.items()}
+                wandb.summary["eval_data_schema"] = schema
+                schema_path.parent.mkdir(parents=True, exist_ok=True)
+                json.dump(schema, open(schema_path, "w"), indent=2)
+                df.head(50).to_csv(sample_path, index=False)
 
-            schema_art = wandb.Artifact(
-                "evaluation_schema", type="schema"
+                schema_art = wandb.Artifact(
+                    "evaluation_schema", type="schema"
+                )
+                schema_art.add_file(str(schema_path))
+                schema_art.add_file(str(sample_path))
+                run.log_artifact(schema_art, aliases=["latest"])
+                if cfg.data_load.get("log_sample_artifacts", True):
+                    wandb.log({"eval_sample_rows": wandb.Table(dataframe=df.head(50))})
+
+            # ─── Metrics and arrays ─────────────────────────────────
+            model_art = run.use_artifact("model:latest")
+            model_dir = model_art.download(root=tmp_dir)
+            model_file = os.path.join(model_dir, "model.pkl")
+            report, y_true, y_pred, y_proba = generate_report(
+                cfg_dict,
+                model_path=model_file,
+                processed_dir=data_path,
             )
-            schema_art.add_file(str(schema_path))
-            schema_art.add_file(str(sample_path))
-            run.log_artifact(schema_art, aliases=["latest"])
-            if cfg.data_load.get("log_sample_artifacts", True):
-                wandb.log({"eval_sample_rows": wandb.Table(dataframe=df.head(50))})
-
-        # ─── Metrics and arrays ─────────────────────────────────
-        model_art = run.use_artifact("model:latest")
-        model_dir = model_art.download()
-        model_file = os.path.join(model_dir, "model.pkl")
-        report, y_true, y_pred, y_proba = generate_report(
-            cfg_dict,
-            model_path=model_file,
-            processed_dir=data_path,
-        )
 
         flat = {}
         for split, metrics in report.items():

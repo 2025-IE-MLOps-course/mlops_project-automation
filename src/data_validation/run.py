@@ -56,8 +56,9 @@ def main(cfg: DictConfig) -> None:
 
         # Load raw data artifact from W&B
         raw_art = run.use_artifact("raw_data:latest")
-        raw_path = raw_art.download()
-        df = pd.read_csv(os.path.join(raw_path, "raw_data.csv"))
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            raw_path = raw_art.download(root=tmp_dir)
+            df = pd.read_csv(os.path.join(raw_path, "raw_data.csv"))
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
 
