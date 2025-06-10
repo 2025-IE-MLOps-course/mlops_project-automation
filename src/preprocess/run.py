@@ -15,6 +15,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
+import tempfile
 
 import hydra
 import wandb
@@ -71,8 +72,9 @@ def main(cfg: DictConfig) -> None:
 
         # Load engineered data from W&B artifact
         eng_art = run.use_artifact("engineered_data:latest")
-        eng_path = eng_art.download()
-        df = pd.read_csv(os.path.join(eng_path, "engineered_data.csv"))
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            eng_path = eng_art.download(root=tmp_dir)
+            df = pd.read_csv(os.path.join(eng_path, "engineered_data.csv"))
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
         sample_path = PROJECT_ROOT / "artifacts" / "preprocess_sample.csv"

@@ -10,6 +10,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+import tempfile
 
 import hydra
 import wandb
@@ -58,8 +59,9 @@ def main(cfg: DictConfig) -> None:
 
         # Load validated data from W&B artifact
         val_art = run.use_artifact("validated_data:latest")
-        val_path = val_art.download()
-        df = pd.read_csv(os.path.join(val_path, "validated_data.csv"))
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            val_path = val_art.download(root=tmp_dir)
+            df = pd.read_csv(os.path.join(val_path, "validated_data.csv"))
         if df.empty:
             logger.warning("Loaded dataframe is empty.")
 

@@ -17,6 +17,7 @@ import pickle
 import sys
 import os
 from pathlib import Path
+import tempfile
 
 import pandas as pd
 import yaml
@@ -69,19 +70,20 @@ def run_inference(
         config: Dict = yaml.safe_load(fh)
 
     if run is not None:
-        model_art = run.use_artifact("model:latest")
-        model_dir = model_art.download()
-        model = _load_pickle(
-            os.path.join(model_dir, "model.pkl"),
-            "model",
-        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            model_art = run.use_artifact("model:latest")
+            model_dir = model_art.download(root=tmp_dir)
+            model = _load_pickle(
+                os.path.join(model_dir, "model.pkl"),
+                "model",
+            )
 
-        pp_art = run.use_artifact("preprocessing_pipeline:latest")
-        pp_dir = pp_art.download()
-        pipeline = _load_pickle(
-            os.path.join(pp_dir, "preprocessing_pipeline.pkl"),
-            "preprocessing pipeline",
-        )
+            pp_art = run.use_artifact("preprocessing_pipeline:latest")
+            pp_dir = pp_art.download(root=tmp_dir)
+            pipeline = _load_pickle(
+                os.path.join(pp_dir, "preprocessing_pipeline.pkl"),
+                "preprocessing pipeline",
+            )
     else:
         pp_path = _resolve(
             config.get("artifacts", {}).get(
