@@ -19,6 +19,7 @@ pip-wheel-metadata/
 .env
 .env.*
 *.env
+!/.env.example
 
 # Logs
 logs/

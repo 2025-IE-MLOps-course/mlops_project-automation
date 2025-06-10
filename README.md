@@ -130,8 +130,8 @@ conda activate mlops_project
 ./setup.sh  # install all dependencies for testing
 dvc pull     # download project data
 wandb login  # authenticate with Weights & Biases
-export WANDB_PROJECT=opioid_mlops_project
-export WANDB_ENTITY=<your-wandb-entity>
+cp .env.example .env  # create local credentials file
+# Edit `.env` and set WANDB_PROJECT and WANDB_ENTITY
 ```
 
 **Run end-to-end pipeline:**
