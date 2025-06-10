@@ -40,7 +40,6 @@ logger = logging.getLogger("feature_eng")
 
 @hydra.main(config_path=str(PROJECT_ROOT), config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
-    config_path = PROJECT_ROOT / "config.yaml"
     cfg_dict = OmegaConf.to_container(cfg, resolve=True)
 
     dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")

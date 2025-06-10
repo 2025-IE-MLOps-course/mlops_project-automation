@@ -1,4 +1,3 @@
-import os
 import pytest
 from evaluation.evaluator import generate_report
 

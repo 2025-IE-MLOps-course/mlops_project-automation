@@ -17,7 +17,6 @@ from model.model import (
 )
 
 from evaluation.evaluator import generate_report
-import sys
 
 # --- Fixtures for toy data and config ---
 
@@ -189,7 +188,6 @@ def test_model_and_preproc_roundtrip(tmp_path, toy_df, minimal_config):
     with open(minimal_config["artifacts"]["preprocessing_pipeline"], "rb") as f:
         preproc = pickle.load(f)
     # Should be usable for transform/predict
-    X = toy_df[["f1", "f2"]].values
     # Preproc is a Pipeline; should have transform
     Xt = preproc.fit_transform(toy_df[["f1", "f2"]])
     preds = model.predict(Xt)

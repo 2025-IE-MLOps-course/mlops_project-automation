@@ -9,7 +9,6 @@ Comprehensive pytest suite for preprocessing.py
 import pytest
 import pandas as pd
 import numpy as np
-from sklearn.pipeline import Pipeline
 from sklearn.exceptions import NotFittedError
 
 from preprocess import preprocessing
