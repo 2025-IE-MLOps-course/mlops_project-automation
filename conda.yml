@@ -10,4 +10,5 @@ dependencies:
   - pyyaml
   - pip
   - pip:
-      - mlflow
+      - mlflow-skinny
+      - wandb
