@@ -90,6 +90,7 @@ The pipeline predicts **opioid abuse disorder** based on anonymized claims data,
 
 ### 3. Model Training, Feature Engineering & Preprocessing (`src/model/model.py`)
 - Performs all feature engineering and preprocessing within the training step
+- Loads the `validated_data` artifact from the previous step
 - Data split (train/valid/test) with stratification
 - Model registry (easily swap DecisionTree, LogisticRegression, RandomForest)
 - Evaluation: accuracy, precision, recall, specificity, F1, ROC AUC, etc.
